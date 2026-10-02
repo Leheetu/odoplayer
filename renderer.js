@@ -26,16 +26,18 @@ window.visualViewport?.addEventListener('resize', scheduleViewport, { passive: t
 window.visualViewport?.addEventListener('scroll', scheduleViewport, { passive: true });
 syncViewport();
 // HUD visibility: hide after five idle seconds while playing; keep controls visible while paused or dragging.
+const HUD_IDLE_MS = 5000;
 let idleTimer, pointerHeld = false;
+let revealOnlyPointerId = null;
 function showHUD() {
   clearTimeout(idleTimer);
   document.body.classList.remove('hud-hidden');
   hud.inert = false;
-  if (!video.paused) idleTimer = setTimeout(hideHUD, 5000);
+  if (!video.paused) idleTimer = setTimeout(hideHUD, HUD_IDLE_MS);
 }
 function hideHUD() {
   if (!ready() || video.error || video.paused) return;
-  if (drag || pointerHeld) { idleTimer = setTimeout(hideHUD, 5000); return; }
+  if (drag || pointerHeld) { idleTimer = setTimeout(hideHUD, HUD_IDLE_MS); return; }
   if (hud.contains(document.activeElement)) document.activeElement.blur();
   hud.inert = true;
   document.body.classList.add('hud-hidden');
@@ -45,8 +47,19 @@ new ResizeObserver(() => {
   document.documentElement.style.setProperty('--hud-height', hud.offsetHeight + 'px');
 }).observe(hud);
 // Any user interaction restores the HUD and restarts its inactivity timer.
-for (const name of ['pointermove', 'keydown', 'wheel', 'focusin']) document.addEventListener(name, showHUD, { capture: true, passive: true });
-document.addEventListener('pointerdown', () => { pointerHeld = true; showHUD(); }, true);
+for (const name of ['keydown', 'wheel', 'focusin']) document.addEventListener(name, showHUD, { capture: true, passive: true });
+// Capture hidden state before showHUD removes it. A mobile wake-up tap must not pause or crop.
+document.addEventListener('pointerdown', event => {
+  revealOnlyPointerId = document.body.classList.contains('mobile-device') &&
+    document.body.classList.contains('hud-hidden') && $('stage').contains(event.target)
+    ? event.pointerId : null;
+  pointerHeld = true;
+  showHUD();
+}, true);
+document.addEventListener('pointermove', event => {
+  // Touch hover events must not reveal the HUD before the initial tap is recorded.
+  if (event.pointerType === 'mouse' || pointerHeld) showHUD();
+}, { capture: true, passive: true });
 for (const name of ['pointerup', 'pointercancel']) document.addEventListener(name, () => { pointerHeld = false; showHUD(); }, true);
 window.addEventListener('blur', () => { pointerHeld = false; showHUD(); });
 window.addEventListener('focus', showHUD);
@@ -197,13 +210,17 @@ stage.addEventListener('pointerdown', event => {
   const y = event.clientY - view.bounds.top - view.top;
   const inside = x >= 0 && x <= view.area.width * view.scale && y >= 0 && y <= view.area.height * view.scale;
   cropGesture = { pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY,
-    anchor: inside ? sourcePoint(event, view) : null, end: null, moved: false };
+    anchor: inside ? sourcePoint(event, view) : null, end: null, moved: false,
+    revealOnly: event.pointerId === revealOnlyPointerId,
+    // Phone/tablet taps may drift: require 24 CSS pixels rather than the desktop 6.
+    threshold: document.body.classList.contains('mobile-device') ? 24 : 6,
+    minimumSide: document.body.classList.contains('mobile-device') ? 24 : 8 };
   stage.setPointerCapture(event.pointerId);
   event.preventDefault();
 });
 function updateCropGesture(event) {
-  if (!cropGesture || event.pointerId !== cropGesture.pointerId) return;
-  if (Math.hypot(event.clientX - cropGesture.clientX, event.clientY - cropGesture.clientY) >= 6) cropGesture.moved = true;
+  if (!cropGesture || event.pointerId !== cropGesture.pointerId || cropGesture.revealOnly) return;
+  if (Math.hypot(event.clientX - cropGesture.clientX, event.clientY - cropGesture.clientY) >= cropGesture.threshold) cropGesture.moved = true;
   const view = viewGeometry();
   if (view && cropGesture.anchor) cropGesture.end = sourcePoint(event, view);
   stage.classList.toggle('selecting-crop', cropGesture.moved && Boolean(cropGesture.anchor));
@@ -214,11 +231,13 @@ stage.addEventListener('pointerup', event => {
   if (!cropGesture || event.pointerId !== cropGesture.pointerId) return;
   updateCropGesture(event);
   const wasClick = !cropGesture.moved;
+  const { revealOnly, minimumSide } = cropGesture;
   const rect = gestureRectangle(), view = viewGeometry();
   cancelCropGesture();
+  if (revealOnly) return;
   if (wasClick) { togglePlayback(); return; }
   // Ignore accidental thin drags rather than creating an extreme zoom.
-  if (rect && view && rect.width >= 2 && rect.height >= 2 && rect.width * view.scale >= 8 && rect.height * view.scale >= 8) setCrop(rect);
+  if (rect && view && rect.width >= 2 && rect.height >= 2 && rect.width * view.scale >= minimumSide && rect.height * view.scale >= minimumSide) setCrop(rect);
 });
 // Cancel interrupted crop gestures; recalculate the display after video or stage size changes.
 stage.addEventListener('pointercancel', cancelCropGesture);
