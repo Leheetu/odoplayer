@@ -1,3 +1,4 @@
+// Browser entry point: DOM references and in-memory playback/loop state. No video data is uploaded.
 const $ = id => document.getElementById(id);
 const video = $('video');
 const { clamp, speedStep, region, format } = PlayerModel;
@@ -24,6 +25,7 @@ window.addEventListener('orientationchange', () => { scheduleViewport(); showHUD
 window.visualViewport?.addEventListener('resize', scheduleViewport, { passive: true });
 window.visualViewport?.addEventListener('scroll', scheduleViewport, { passive: true });
 syncViewport();
+// HUD visibility: hide after five idle seconds while playing; keep controls visible while paused or dragging.
 let idleTimer, pointerHeld = false;
 function showHUD() {
   clearTimeout(idleTimer);
@@ -38,18 +40,22 @@ function hideHUD() {
   hud.inert = true;
   document.body.classList.add('hud-hidden');
 }
+// Measure the HUD so the video reserves exactly the space occupied by its controls.
 new ResizeObserver(() => {
   document.documentElement.style.setProperty('--hud-height', hud.offsetHeight + 'px');
 }).observe(hud);
+// Any user interaction restores the HUD and restarts its inactivity timer.
 for (const name of ['pointermove', 'keydown', 'wheel', 'focusin']) document.addEventListener(name, showHUD, { capture: true, passive: true });
 document.addEventListener('pointerdown', () => { pointerHeld = true; showHUD(); }, true);
 for (const name of ['pointerup', 'pointercancel']) document.addEventListener(name, () => { pointerHeld = false; showHUD(); }, true);
 window.addEventListener('blur', () => { pointerHeld = false; showHUD(); });
 window.addEventListener('focus', showHUD);
+// Separate shortcut hints from status/errors so mobile can hide only keyboard instructions.
 function status(message) {
   $('status').textContent = message;
   $('status').classList.toggle('shortcut-hint', message.startsWith('Space:'));
 }
+// Reflect loop state in the strip, toggle button, timestamps, and accessible handle values.
 function renderLoop() {
   $('selection').hidden = !loop;
   $('loop-toggle').disabled = !ready();
@@ -67,21 +73,25 @@ function renderLoop() {
     handle.setAttribute('aria-valuetext', format(value));
   }
 }
+// Keep the seek slider, elapsed-time display, and loop-strip playhead synchronized.
 function updatePosition() {
   $('clock').textContent = `${format(video.currentTime)} / ${format(video.duration)}`;
   $('seek').value = video.currentTime;
   $('playhead').style.left = `${ready() ? video.currentTime / video.duration * 100 : 0}%`;
 }
+// Apply playback speed with pitch correction and update the percentage and limit buttons.
 function setSpeed(value) {
   speed = value; video.playbackRate = value; video.preservesPitch = true;
   $('speed').textContent = `${Math.round(value * 100)}%`;
   $('slower').disabled = value <= 0.2; $('faster').disabled = value >= 2;
 }
+// Start playback within the enabled loop and report browser playback errors.
 async function play() {
   if (!ready()) return;
   if (loopEnabled && loop && (video.currentTime < loop.start || video.currentTime >= loop.end)) video.currentTime = loop.start;
   try { await video.play(); } catch (error) { if (error.name !== 'AbortError') status(`Could not play this file: ${error.message}`); }
 }
+// Replace the local blob URL, release the previous file, and reset crop/loop state for a new video.
 function load(file) {
   if (!file) return;
   setCrop(null);
@@ -94,11 +104,13 @@ function load(file) {
   sourceURL = URL.createObjectURL(file); video.src = sourceURL;
   status('Loading video…');
 }
+// Native file selection and drag-and-drop both feed the same local-file loader.
 $('open').addEventListener('click', () => $('file').click());
 $('file').addEventListener('change', event => { load(event.target.files[0]); event.target.value = ''; });
 document.addEventListener('dragover', event => { event.preventDefault(); showHUD(); document.body.classList.add('dragging'); });
 document.addEventListener('dragleave', event => { if (!event.relatedTarget) document.body.classList.remove('dragging'); });
 document.addEventListener('drop', event => { event.preventDefault(); document.body.classList.remove('dragging'); load(event.dataTransfer.files[0]); });
+// Enable controls once duration is known; follow video events for errors and Play/Stop labels.
 video.addEventListener('loadedmetadata', () => {
   if (!ready()) { status('This file has no usable video duration. Try an H.264 MP4.'); return; }
   for (const id of ['play', 'seek']) $(id).disabled = false;
@@ -115,6 +127,7 @@ const stage = $('stage');
 const frame = $('video-frame');
 const cropOutline = $('crop-outline');
 let crop = null, cropGesture = null;
+// Fit the selected source rectangle into the stage without stretching; calculate letterbox offsets.
 function viewGeometry() {
   if (!video.videoWidth || !video.videoHeight) return null;
   const bounds = stage.getBoundingClientRect();
@@ -124,6 +137,7 @@ function viewGeometry() {
   return { bounds, area, scale, left: (bounds.width - area.width * scale) / 2,
     top: (bounds.height - area.height * scale) / 2, mirrored: video.classList.contains('mirrored') };
 }
+// Scale and offset the full video inside a clipping frame, including mirrored crop coordinates.
 function layoutVideo() {
   const view = viewGeometry();
   if (!view) {
@@ -135,16 +149,19 @@ function layoutVideo() {
   Object.assign(video.style, { width: `${video.videoWidth * scale}px`, height: `${video.videoHeight * scale}px`, left: `${-offsetX * scale}px`, top: `${-area.y * scale}px` });
   drawCropOutline();
 }
+// Translate screen pointer coordinates back into original video pixels.
 function sourcePoint(event, view) {
   const localX = clamp((event.clientX - view.bounds.left - view.left) / view.scale, 0, view.area.width);
   const localY = clamp((event.clientY - view.bounds.top - view.top) / view.scale, 0, view.area.height);
   return { x: view.area.x + (view.mirrored ? view.area.width - localX : localX), y: view.area.y + localY };
 }
+// Normalize a crop drag in any direction into a source-space rectangle.
 function gestureRectangle() {
   if (!cropGesture?.anchor || !cropGesture.end) return null;
   const { anchor, end } = cropGesture;
   return { x: Math.min(anchor.x, end.x), y: Math.min(anchor.y, end.y), width: Math.abs(end.x - anchor.x), height: Math.abs(end.y - anchor.y) };
 }
+// Project the pending crop back onto the screen as a red selection outline.
 function drawCropOutline() {
   const rect = gestureRectangle(), view = viewGeometry();
   cropOutline.hidden = !rect || !view || !cropGesture.moved;
@@ -152,6 +169,7 @@ function drawCropOutline() {
   const localX = view.mirrored ? view.area.x + view.area.width - rect.x - rect.width : rect.x - view.area.x;
   Object.assign(cropOutline.style, { left: `${view.left + localX * view.scale}px`, top: `${view.top + (rect.y - view.area.y) * view.scale}px`, width: `${rect.width * view.scale}px`, height: `${rect.height * view.scale}px` });
 }
+// Clear temporary selection state and safely release pointer capture.
 function cancelCropGesture() {
   const pointerId = cropGesture?.pointerId;
   cropGesture = null;
@@ -159,6 +177,7 @@ function cancelCropGesture() {
   stage.classList.remove('selecting-crop');
   if (pointerId !== undefined && stage.hasPointerCapture(pointerId)) stage.releasePointerCapture(pointerId);
 }
+// Apply or clear a view-only crop and update the border and crop button.
 function setCrop(value) {
   cancelCropGesture();
   crop = value;
@@ -169,6 +188,7 @@ function setCrop(value) {
   layoutVideo();
   showHUD();
 }
+// Video gestures: capture the pointer, distinguish clicks from drags, then commit valid crops on release.
 stage.addEventListener('pointerdown', event => {
   if (!ready() || event.button !== 0 || !event.isPrimary || cropGesture) return;
   const view = viewGeometry();
@@ -200,6 +220,7 @@ stage.addEventListener('pointerup', event => {
   // Ignore accidental thin drags rather than creating an extreme zoom.
   if (rect && view && rect.width >= 2 && rect.height >= 2 && rect.width * view.scale >= 8 && rect.height * view.scale >= 8) setCrop(rect);
 });
+// Cancel interrupted crop gestures; recalculate the display after video or stage size changes.
 stage.addEventListener('pointercancel', cancelCropGesture);
 stage.addEventListener('lostpointercapture', cancelCropGesture);
 stage.addEventListener('dragstart', event => event.preventDefault());
@@ -212,23 +233,27 @@ new ResizeObserver(layoutVideo).observe(stage);
 video.addEventListener('loadedmetadata', layoutVideo);
 video.addEventListener('resize', layoutVideo);
 
+// Restart the whole file; retain the selected loop but switch looping off.
 function restart() {
   if (!ready()) return;
   loopEnabled = false; renderLoop();
   video.currentTime = 0;
   play();
 }
+// Seeking outside the enabled region disables looping so playback can continue from the chosen time.
 function seek(time) {
   if (!ready()) return;
   if (loopEnabled && loop && (time < loop.start || time >= loop.end)) { loopEnabled = false; renderLoop(); }
   video.currentTime = clamp(time, 0, video.duration);
 }
+// Wire the timeline, speed, volume, and mirror controls to their shared playback helpers.
 $('seek').addEventListener('input', event => seek(Number(event.target.value)));
 $('slower').addEventListener('click', () => setSpeed(speedStep(speed, -1)));
 $('faster').addEventListener('click', () => setSpeed(speedStep(speed, 1)));
 $('speed').addEventListener('click', () => setSpeed(1));
 $('volume').addEventListener('input', event => { video.volume = Number(event.target.value); });
 $('mirror').addEventListener('click', () => { const mirrored = video.classList.toggle('mirrored'); $('mirror').setAttribute('aria-pressed', String(mirrored)); cancelCropGesture(); layoutVideo(); });
+// Create a default ten-second selection only when none exists; later toggles reuse the selection.
 function toggleLoop() {
   if (!ready()) return;
   if (!loop) {
@@ -242,6 +267,7 @@ function toggleLoop() {
   renderLoop();
 }
 $('loop-toggle').addEventListener('click', toggleLoop);
+// Loop-strip gestures: convert pointer positions to seconds and create or resize a selected region.
 const track = $('loop-track');
 function pointerTime(event) { const box = track.getBoundingClientRect(); return clamp((event.clientX - box.left) / box.width, 0, 1) * video.duration; }
 track.addEventListener('pointerdown', event => {
@@ -258,6 +284,7 @@ track.addEventListener('pointermove', event => {
   else loop.end = clamp(time, loop.start + Math.min(0.1, video.duration - loop.start), video.duration);
   renderLoop();
 });
+// Commit valid loop drags; cancelled or tiny selections restore the previous loop.
 function finishDrag(cancelled) {
   if (!drag) return;
   if (cancelled || !loop || loop.end - loop.start < 0.1) { loop = drag.previous; loopEnabled = drag.enabled; }
@@ -267,6 +294,7 @@ function finishDrag(cancelled) {
 track.addEventListener('pointerup', () => finishDrag(false));
 track.addEventListener('pointercancel', () => finishDrag(true));
 track.addEventListener('lostpointercapture', () => finishDrag(true));
+// Focused loop handles also support fine keyboard adjustment for accessibility.
 for (const side of ['start', 'end']) $(`handle-${side}`).addEventListener('keydown', event => {
   if (!loop || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
   event.preventDefault(); event.stopPropagation();
@@ -274,6 +302,7 @@ for (const side of ['start', 'end']) $(`handle-${side}`).addEventListener('keydo
   loop[side] = side === 'start' ? clamp(loop.start + delta, 0, loop.end - 0.1) : clamp(loop.end + delta, loop.start + 0.1, video.duration);
   renderLoop();
 });
+// Global shortcuts: R and L also work with a focused control; other keys defer to native control behavior.
 document.addEventListener('keydown', event => {
   if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 'r') {
     event.preventDefault(); if (!event.repeat) restart(); return;
@@ -287,9 +316,11 @@ document.addEventListener('keydown', event => {
   else if (event.key === '-' || event.key === '_') setSpeed(speedStep(speed, -1));
   else if (event.key === '+' || event.key === '=') setSpeed(speedStep(speed, 1));
 });
+// Jump back at the loop endpoint; skip enforcement during seeking or an unfinished loop drag.
 function enforceLoop() {
   if (loopEnabled && loop && !drag && !video.seeking && !video.paused && video.currentTime >= loop.end) video.currentTime = loop.start;
 }
+// Media events and animation frames keep the UI responsive and handle loops reaching the file end.
 video.addEventListener('timeupdate', () => { enforceLoop(); updatePosition(); });
 video.addEventListener('ended', () => { if (loopEnabled && loop) { video.currentTime = loop.start; play(); } });
 function tick() { enforceLoop(); if (!video.paused) updatePosition(); requestAnimationFrame(tick); }
@@ -302,8 +333,10 @@ const mobilePlatform = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 const desktopModeIPad = /Mac/i.test(navigator.platform) && navigator.maxTouchPoints > 1;
 fullscreenButton.hidden = !(mobilePlatform || desktopModeIPad);
 document.body.classList.toggle('mobile-device', mobilePlatform || desktopModeIPad);
+// Detect standard/prefixed fullscreen and Home Screen web-app mode.
 function fullscreenElement() { return document.fullscreenElement || document.webkitFullscreenElement; }
 function standaloneMode() { return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; }
+// Synchronize fullscreen labels and recalculate the viewport after entering or leaving fullscreen.
 function updateFullscreenButton() {
   const active = Boolean(fullscreenElement());
   fullscreenButton.setAttribute('aria-pressed', String(active));
@@ -313,6 +346,7 @@ function updateFullscreenButton() {
   scheduleViewport();
   showHUD();
 }
+// Explain the Home Screen alternative when whole-page fullscreen is unavailable.
 function fullscreenHelp() {
   if (standaloneMode()) {
     window.alert('OdoPlayer is already running without browser toolbars. Any remaining system status bar is controlled by your device.');
@@ -320,6 +354,7 @@ function fullscreenHelp() {
     window.alert('This browser cannot put the whole player into full-screen here. On iPhone: open this page in Safari, tap Share, choose Add to Home Screen, enable Open as Web App if shown, and open OdoPlayer from that new icon. This removes Safari’s toolbars while keeping the crop and player controls.');
   }
 }
+// Request or exit whole-page fullscreen directly from a user gesture, with Safari API fallbacks.
 fullscreenButton.addEventListener('click', async () => {
   try {
     if (fullscreenElement()) {

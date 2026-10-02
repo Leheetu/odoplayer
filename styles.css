@@ -1,13 +1,16 @@
+/* Base palette and layout. Later sections intentionally override these defaults for specific states/screens. */
 :root { color-scheme: dark; font-family: Segoe UI, Arial, sans-serif; color: #edf2f7; background: #080a0e; font-size: 13px; --hud-height: 170px; }
 * { box-sizing: border-box; }
 body { margin: 0; height: 100vh; overflow: hidden; }
 main { position: relative; width: 100%; height: 100%; overflow: hidden; }
+/* Shared button styling, focus visibility, disabled state, and pink primary action. */
 button { font: inherit; font-weight: 600; background: #30232c; color: #ffffff; border: 1px solid #654052; border-radius: 6px; padding: 7px 11px; cursor: pointer; white-space: nowrap; }
 button:hover { background: #4b2b3d; }
 button:focus-visible, input:focus-visible { outline: 2px solid #f477ad; outline-offset: 2px; }
 button:disabled { opacity: .35; cursor: default; }
 .primary { background: #b52b69; color: #ffffff; border-color: #b52b69; min-width: 62px; }
 .primary:hover { background: #c43875; }
+/* Video surface and empty-state baseline; crop and responsive overrides appear later. */
 #stage { position: absolute; inset: 0 0 var(--hud-height); background: #080a0e; overflow: hidden; display: flex; align-items: center; justify-content: center; transition: bottom .25s ease; }
 video { width: 100%; height: 100%; object-fit: contain; display: block; position: absolute; inset: 0; }
 video.mirrored { transform: scaleX(-1); }
@@ -15,12 +18,15 @@ video.mirrored { transform: scaleX(-1); }
 .empty-icon { width: 52px; height: 52px; display: grid; place-items: center; border: 1px solid #70405a; border-radius: 14px; margin: auto; color: #b52b69; font-size: 22px; }
 h2 { color: #edf2f7; font-size: 22px; margin-bottom: 8px; }
 small { color: #737f91; }
+/* File-drop feedback overlay. */
 #drop-hint { display: none; position: absolute; inset: 0; background: #351226e8; border: 2px dashed #b52b69; align-items: center; justify-content: center; font-size: 24px; z-index: 2; }
 body.dragging #drop-hint { display: flex; }
+/* Bottom HUD positioning and its slide-out animation during idle playback. */
 .controls { position: absolute; bottom: 0; left: 0; right: 0; padding: 8px 16px 6px; background: #101319; border-top: 1px solid #282f3b; transition: transform .25s ease, opacity .25s ease; }
 .hud-hidden .controls { transform: translateY(100%); opacity: 0; pointer-events: none; }
 .hud-hidden #stage { bottom: 0; }
 .hud-hidden { cursor: none; }
+/* File/time labels, seek slider, and loop selection strip. */
 .info, .loop-caption { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 #filename { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 #clock { white-space: nowrap; font-variant-numeric: tabular-nums; color: #acb6c7; font-size: 12px; }
@@ -33,6 +39,7 @@ body.dragging #drop-hint { display: flex; }
 .handle.start { left: -7px; }
 .handle.end { right: -7px; }
 #playhead { position: absolute; width: 2px; top: 0; bottom: 0; background: white; pointer-events: none; }
+/* Desktop control alignment, joined speed buttons, active toggles, and volume. */
 .toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 10px; }
 #open { justify-self: start; }
 .center-controls { display: flex; align-items: center; gap: 10px; }
@@ -47,10 +54,13 @@ button[aria-pressed=true] { background: #b52b69; border-color: #d74c8b; color: #
 .volume { margin-left: auto; display: flex; align-items: center; gap: 6px; color: #9ca9bc; font-size: 11px; }
 #volume { width: 80px; accent-color: #b52b69; }
 #status { font-size: 10px; color: #9ca9bc; margin: 0 0 7px; min-height: 12px; }
+/* Honor JavaScript/HTML hidden state even when component rules set an explicit display value. */
 [hidden] { display: none !important; }
+/* Compact spacing for narrower windows; reduced-motion users skip HUD transitions. */
 @media(max-width: 760px) { .controls { padding-inline: 10px; } button { padding: 6px 8px; } .toolbar, .center-controls { gap: 6px; } #volume { width: 60px; } }
 @media(prefers-reduced-motion: reduce) { #stage, .controls { transition: none; } }
 
+/* Keep disabled loop selections visible in grey without implying active looping. */
 #selection.inactive { background: #89909b33; border-color: #78818e; }
 #selection.inactive .handle { background: #8c949f; }
 
@@ -63,6 +73,7 @@ button[aria-pressed=true] { background: #b52b69; border-color: #d74c8b; color: #
 #stage.crop-active::after { content: ''; position: absolute; inset: 0; border: 2px solid #ef4656; pointer-events: none; z-index: 3; }
 #clear-crop { color: #fff; background: #b72435; border-color: #f2606e; }
 #clear-crop:hover { background: #d83245; }
+/* Allow extra room for crop controls on smaller screens. */
 @media(max-width: 900px) {
   .has-crop .toolbar { grid-template-columns: auto minmax(0, 1fr); }
   .has-crop .center-controls { grid-column: 1 / -1; grid-row: 1; justify-content: center; }
@@ -97,6 +108,7 @@ body {
 #filename { flex: 1; }
 #stage { bottom: min(var(--hud-height), 100%); }
 .hud-hidden #stage { bottom: 0; }
+/* Stack the toolbar into rows on narrow phone screens. */
 @media (max-width: 680px) {
   .toolbar { grid-template-columns: auto minmax(0, 1fr); }
   .center-controls { grid-column: 1 / -1; grid-row: 1; gap: 6px; }
@@ -104,6 +116,7 @@ body {
   .volume { grid-column: 2; grid-row: 2; }
   #status { overflow-wrap: anywhere; }
 }
+/* Reduce vertical spacing for landscape phones and other short viewports. */
 @media (max-height: 450px) {
   .controls { padding-top: 4px; }
   .seek { margin: 3px 0; }
@@ -114,6 +127,7 @@ body {
   #empty h2 { margin: 0; font-size: 17px; }
   #empty p { margin: 6px 0; }
 }
+/* Increase minimum control sizes for touch input. */
 @media (pointer: coarse) {
   button { min-height: 34px; }
   input[type=range] { min-height: 22px; }
@@ -125,10 +139,12 @@ html, body, main, .controls { touch-action: manipulation; }
 button, input, label { touch-action: manipulation; }
 /* Selection surfaces still own their drag gestures. */
 #stage, #loop-track, .handle { touch-action: none; }
+/* Volume and the mobile fullscreen button share the toolbar right side. */
 .right-controls { display: flex; align-items: center; justify-self: end; gap: 10px; min-width: 0; }
 #fullscreen { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-width: 54px; padding: 3px 7px; line-height: 1.1; }
 #fullscreen span { font-size: 18px; }
 #fullscreen small { color: inherit; font-size: 8px; font-weight: 400; }
+/* Place right-side actions on a second row when the full toolbar would be crowded. */
 @media (max-width: 900px) {
   .toolbar { grid-template-columns: auto minmax(0, 1fr); }
   .center-controls { grid-column: 1 / -1; grid-row: 1; justify-content: center; }
@@ -154,10 +170,12 @@ button, input, label { touch-action: manipulation; }
 /* Pink tint preserves the artwork's shading and existing 50% opacity. */
 #empty-art { filter: grayscale(1) sepia(1) saturate(3) hue-rotate(285deg); }
 
+/* Tiny speed heading and stable alignment of the practice controls. */
 .speed-setting { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .speed-title { color: #9ca9bc; font-size: 8px; line-height: 1; font-weight: 400; }
 .center-controls { align-items: flex-end; }
 #clear-crop { min-width: 108px; }
+/* Very subdued crop instruction when there is no crop to clear. */
 #clear-crop:disabled, #clear-crop:disabled:hover {
   background: #14171d;
   border-color: #1c2028;

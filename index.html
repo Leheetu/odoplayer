@@ -2,34 +2,45 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <!-- Mobile viewport sizing, local-resource policy, and iOS Home Screen presentation. -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; media-src 'self' blob:; connect-src 'none'; object-src 'none'; base-uri 'none'">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="OdoPlayer">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>OdoPlayer</title>
+  <!-- Load shared helpers before the renderer; deferred scripts run after the markup is parsed. -->
   <link rel="stylesheet" href="styles.css">
   <script defer src="model.js"></script>
   <script defer src="renderer.js"></script>
 </head>
 <body>
+  <!-- Hidden native video picker, opened by either Open Video or the empty-state button. -->
   <input id="file" type="file" accept="video/*" hidden>
   <main>
+    <!-- Playback surface: the clipping frame enables view-only zoom and the outline previews a crop. -->
     <section id="stage" aria-label="Video display">
       <div id="video-frame"><video id="video" playsinline></video></div>
       <div id="crop-outline" hidden aria-hidden="true"></div>
+      <!-- Empty-state instructions, invisible picker hit area, and decorative image; hidden after loading a file. -->
       <div id="empty"><div class="empty-copy"><button id="empty-open" type="button" aria-label="Open video" title="Open video"></button><div class="empty-icon">▶</div><h2>Select a video</h2><p>Select 'Open Video' or drag &amp; drop</p><small>The video stays on your device.</small></div><img id="empty-art" src="pipasentopng.png" alt="" draggable="false"></div>
+      <!-- Drag-and-drop overlay, shown while a file is dragged over the player. -->
       <div id="drop-hint">Drop to open video</div>
     </section>
+    <!-- Bottom HUD; its measured height determines the remaining video area. -->
     <section id="hud" class="controls" aria-label="Playback controls">
+      <!-- Current filename, time display, and ordinary playback seek slider. -->
       <div class="info"><strong id="filename">No video loaded</strong><span id="clock">0:00.0 / 0:00.0</span></div>
       <input id="seek" class="seek" type="range" min="0" max="100" step="0.01" value="0" aria-label="Playback position" disabled>
+      <!-- Separate loop selection strip with adjustable start/end handles and a playback marker. -->
       <div class="loop-caption"><span>LOOP REGION</span><span id="loop-label"></span></div>
       <div id="loop-track" aria-label="Drag to select a loop region">
         <div id="selection" hidden><button id="handle-start" class="handle start" aria-label="Loop start; arrow keys adjust" role="slider" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0"></button><button id="handle-end" class="handle end" aria-label="Loop end; arrow keys adjust" role="slider" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0"></button></div>
         <div id="playhead"></div>
       </div>
+      <!-- Live status/error messages; keyboard hints are hidden on mobile by CSS. -->
       <p id="status" class="shortcut-hint" role="status">Space: play/stop · R: restart video · L: loop on/off · ← →: seek 5s · − +: speed</p>
+      <!-- Main controls: file picker at left, practice controls centered, volume/fullscreen at right. -->
       <div class="toolbar">
         <button id="open">Open Video</button>
         <div class="center-controls">
@@ -37,6 +48,7 @@
           <div class="speed-setting"><span class="speed-title">Speed</span><div class="group speed"><button id="slower" aria-label="Decrease speed by 10 percentage points">−</button><button id="speed" title="Reset to normal speed">100%</button><button id="faster" aria-label="Increase speed by 10 percentage points">+</button></div></div>
           <button id="play" class="primary" disabled>Play</button>
           <button id="loop-toggle" aria-pressed="false" disabled>Loop off</button>
+          <!-- Disabled crop instruction becomes the red Clear Crop button when a crop is active. -->
           <button id="clear-crop" disabled>Drag video to Crop</button>
         </div>
         <div class="right-controls">
