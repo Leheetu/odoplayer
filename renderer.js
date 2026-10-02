@@ -107,6 +107,7 @@ async function play() {
 // Replace the local blob URL, release the previous file, and reset crop/loop state for a new video.
 function load(file) {
   if (!file) return;
+  document.body.classList.add('no-video');
   setCrop(null);
   showHUD();
   video.pause(); video.removeAttribute('src'); video.load();
@@ -126,6 +127,8 @@ document.addEventListener('drop', event => { event.preventDefault(); document.bo
 // Enable controls once duration is known; follow video events for errors and Play/Stop labels.
 video.addEventListener('loadedmetadata', () => {
   if (!ready()) { status('This file has no usable video duration. Try an H.264 MP4.'); return; }
+  // Reveal the playback HUD only after a usable video has loaded.
+  document.body.classList.remove('no-video');
   for (const id of ['play', 'seek']) $(id).disabled = false;
   $('seek').max = video.duration; setSpeed(speed); updatePosition(); renderLoop(); showHUD();
   status('Space: play/stop · R: restart video · L: loop on/off · ← →: seek 5s · − +: speed');
