@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; media-src 'self' blob:; connect-src 'none'; object-src 'none'; base-uri 'none'">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="OdoPlayer">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>OdoPlayer</title>
   <link rel="stylesheet" href="styles.css">
   <script defer src="model.js"></script>
@@ -36,7 +39,10 @@
           <button id="loop-toggle" aria-pressed="false" disabled>Loop off</button>
           <button id="clear-crop" hidden>Clear Crop</button>
         </div>
-        <label class="volume">Volume <input id="volume" type="range" min="0" max="1" step="0.01" value="1"></label>
+        <div class="right-controls">
+          <label class="volume">Volume <input id="volume" type="range" min="0" max="1" step="0.01" value="1"></label>
+          <button id="fullscreen" aria-label="Enter full-screen" aria-pressed="false" title="Full-screen"><span aria-hidden="true">[ &nbsp; ]</span><small id="fullscreen-label">Full-screen</small></button>
+        </div>
       </div>
     </section>
   </main>

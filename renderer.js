@@ -287,3 +287,47 @@ video.addEventListener('timeupdate', () => { enforceLoop(); updatePosition(); })
 video.addEventListener('ended', () => { if (loopEnabled && loop) { video.currentTime = loop.start; play(); } });
 function tick() { enforceLoop(); if (!video.paused) updatePosition(); requestAnimationFrame(tick); }
 tick();
+
+// Whole-page fullscreen keeps OdoPlayer's crop, mirror, and custom HUD intact.
+const fullscreenButton = $('fullscreen');
+function fullscreenElement() { return document.fullscreenElement || document.webkitFullscreenElement; }
+function standaloneMode() { return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; }
+function updateFullscreenButton() {
+  const active = Boolean(fullscreenElement());
+  fullscreenButton.setAttribute('aria-pressed', String(active));
+  fullscreenButton.setAttribute('aria-label', active ? 'Exit full-screen' : 'Enter full-screen');
+  fullscreenButton.title = active ? 'Exit full-screen' : 'Full-screen';
+  $('fullscreen-label').textContent = active ? 'Exit' : 'Full-screen';
+  scheduleViewport();
+  showHUD();
+}
+function fullscreenHelp() {
+  if (standaloneMode()) {
+    window.alert('OdoPlayer is already running without browser toolbars. Any remaining system status bar is controlled by your device.');
+  } else {
+    window.alert('This browser cannot put the whole player into full-screen here. On iPhone: open this page in Safari, tap Share, choose Add to Home Screen, enable Open as Web App if shown, and open OdoPlayer from that new icon. This removes Safari’s toolbars while keeping the crop and player controls.');
+  }
+}
+fullscreenButton.addEventListener('click', async () => {
+  try {
+    if (fullscreenElement()) {
+      if (document.exitFullscreen) await document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    } else {
+      const root = document.documentElement;
+      if (root.requestFullscreen && document.fullscreenEnabled !== false) {
+        await root.requestFullscreen({ navigationUI: 'hide' });
+      } else if (root.webkitRequestFullscreen && document.webkitFullscreenEnabled !== false) {
+        root.webkitRequestFullscreen();
+      } else fullscreenHelp();
+    }
+  } catch (error) {
+    fullscreenHelp();
+  } finally {
+    updateFullscreenButton();
+  }
+});
+document.addEventListener('fullscreenchange', updateFullscreenButton);
+document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+document.addEventListener('fullscreenerror', () => status('Full-screen was blocked by the browser. Try opening OdoPlayer from your Home Screen.'));
+document.addEventListener('webkitfullscreenerror', () => status('Full-screen was blocked by the browser. Try opening OdoPlayer from your Home Screen.'));
