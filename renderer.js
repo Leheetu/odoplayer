@@ -4,6 +4,26 @@ const { clamp, speedStep, region, format } = PlayerModel;
 let sourceURL, loop = null, loopEnabled = false, drag = null, speed = 1;
 const ready = () => Number.isFinite(video.duration) && video.duration > 0;
 const hud = $('hud');
+// Safari's visible viewport changes as its toolbars open and close.
+let viewportFrame = 0;
+function syncViewport() {
+  viewportFrame = 0;
+  const viewport = window.visualViewport;
+  const root = document.documentElement.style;
+  root.setProperty('--viewport-height', (viewport?.height || window.innerHeight) + 'px');
+  root.setProperty('--viewport-width', (viewport?.width || window.innerWidth) + 'px');
+  root.setProperty('--viewport-top', (viewport?.offsetTop || 0) + 'px');
+  root.setProperty('--viewport-left', (viewport?.offsetLeft || 0) + 'px');
+}
+function scheduleViewport() {
+  if (!viewportFrame) viewportFrame = requestAnimationFrame(syncViewport);
+}
+window.addEventListener('resize', scheduleViewport, { passive: true });
+window.addEventListener('pageshow', scheduleViewport);
+window.addEventListener('orientationchange', () => { scheduleViewport(); showHUD(); });
+window.visualViewport?.addEventListener('resize', scheduleViewport, { passive: true });
+window.visualViewport?.addEventListener('scroll', scheduleViewport, { passive: true });
+syncViewport();
 let idleTimer, pointerHeld = false;
 function showHUD() {
   clearTimeout(idleTimer);
@@ -26,7 +46,10 @@ document.addEventListener('pointerdown', () => { pointerHeld = true; showHUD(); 
 for (const name of ['pointerup', 'pointercancel']) document.addEventListener(name, () => { pointerHeld = false; showHUD(); }, true);
 window.addEventListener('blur', () => { pointerHeld = false; showHUD(); });
 window.addEventListener('focus', showHUD);
-function status(message) { $('status').textContent = message; }
+function status(message) {
+  $('status').textContent = message;
+  $('status').classList.toggle('shortcut-hint', message.startsWith('Space:'));
+}
 function renderLoop() {
   $('selection').hidden = !loop;
   $('loop-toggle').disabled = !loop;

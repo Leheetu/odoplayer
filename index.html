@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; media-src 'self' blob:; connect-src 'none'; object-src 'none'; base-uri 'none'">
   <title>OdoPlayer</title>
   <link rel="stylesheet" href="styles.css">
@@ -10,7 +10,7 @@
   <script defer src="renderer.js"></script>
 </head>
 <body>
-  <input id="file" type="file" accept="video/*,.mp4,.m4v,.webm,.mov" hidden>
+  <input id="file" type="file" accept="video/*" hidden>
   <main>
     <section id="stage" aria-label="Video display">
       <div id="video-frame"><video id="video" playsinline></video></div>
@@ -26,7 +26,7 @@
         <div id="selection" hidden><button id="handle-start" class="handle start" aria-label="Loop start; arrow keys adjust" role="slider" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0"></button><button id="handle-end" class="handle end" aria-label="Loop end; arrow keys adjust" role="slider" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0"></button></div>
         <div id="playhead"></div>
       </div>
-      <p id="status" role="status">Space: play/stop · R: restart video · L: loop on/off · ← →: seek 5s · − +: speed</p>
+      <p id="status" class="shortcut-hint" role="status">Space: play/stop · R: restart video · L: loop on/off · ← →: seek 5s · − +: speed</p>
       <div class="toolbar">
         <button id="open">Open Video</button>
         <div class="center-controls">
