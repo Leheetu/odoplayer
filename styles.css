@@ -2,20 +2,20 @@
 * { box-sizing: border-box; }
 body { margin: 0; height: 100vh; overflow: hidden; }
 main { position: relative; width: 100%; height: 100%; overflow: hidden; }
-button { font: inherit; font-weight: 600; background: #272d38; color: #edf2f7; border: 1px solid #3c4554; border-radius: 6px; padding: 7px 11px; cursor: pointer; white-space: nowrap; }
-button:hover { background: #354052; }
-button:focus-visible, input:focus-visible { outline: 2px solid #b0edb7; outline-offset: 2px; }
+button { font: inherit; font-weight: 600; background: #30232c; color: #ffffff; border: 1px solid #654052; border-radius: 6px; padding: 7px 11px; cursor: pointer; white-space: nowrap; }
+button:hover { background: #4b2b3d; }
+button:focus-visible, input:focus-visible { outline: 2px solid #f477ad; outline-offset: 2px; }
 button:disabled { opacity: .35; cursor: default; }
-.primary { background: #b2eab7; color: #14291a; border-color: #b2eab7; min-width: 62px; }
-.primary:hover { background: #cef7d2; }
+.primary { background: #b52b69; color: #ffffff; border-color: #b52b69; min-width: 62px; }
+.primary:hover { background: #c43875; }
 #stage { position: absolute; inset: 0 0 var(--hud-height); background: #080a0e; overflow: hidden; display: flex; align-items: center; justify-content: center; transition: bottom .25s ease; }
 video { width: 100%; height: 100%; object-fit: contain; display: block; position: absolute; inset: 0; }
 video.mirrored { transform: scaleX(-1); }
 #empty { text-align: center; z-index: 1; pointer-events: none; color: #9ba6b9; }
-.empty-icon { width: 52px; height: 52px; display: grid; place-items: center; border: 1px solid #404c43; border-radius: 14px; margin: auto; color: #b2eab7; font-size: 22px; }
+.empty-icon { width: 52px; height: 52px; display: grid; place-items: center; border: 1px solid #70405a; border-radius: 14px; margin: auto; color: #b52b69; font-size: 22px; }
 h2 { color: #edf2f7; font-size: 22px; margin-bottom: 8px; }
 small { color: #737f91; }
-#drop-hint { display: none; position: absolute; inset: 0; background: #14291ae8; border: 2px dashed #b2eab7; align-items: center; justify-content: center; font-size: 24px; z-index: 2; }
+#drop-hint { display: none; position: absolute; inset: 0; background: #351226e8; border: 2px dashed #b52b69; align-items: center; justify-content: center; font-size: 24px; z-index: 2; }
 body.dragging #drop-hint { display: flex; }
 .controls { position: absolute; bottom: 0; left: 0; right: 0; padding: 8px 16px 6px; background: #101319; border-top: 1px solid #282f3b; transition: transform .25s ease, opacity .25s ease; }
 .hud-hidden .controls { transform: translateY(100%); opacity: 0; pointer-events: none; }
@@ -24,12 +24,12 @@ body.dragging #drop-hint { display: flex; }
 .info, .loop-caption { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 #filename { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 #clock { white-space: nowrap; font-variant-numeric: tabular-nums; color: #acb6c7; font-size: 12px; }
-.seek { display: block; width: 100%; height: 14px; margin: 6px 0; accent-color: #b2eab7; cursor: pointer; }
+.seek { display: block; width: 100%; height: 14px; margin: 6px 0; accent-color: #b52b69; cursor: pointer; }
 .loop-caption { font-size: 9px; letter-spacing: 1px; color: #9ca9bc; margin-bottom: 5px; }
 #loop-label { letter-spacing: 0; font-size: 11px; font-variant-numeric: tabular-nums; }
 #loop-track { height: 23px; border: 1px solid #394253; background: repeating-linear-gradient(90deg,#202630 0,#202630 calc(10% - 1px),#394253 calc(10% - 1px),#394253 10%); border-radius: 4px; position: relative; touch-action: none; cursor: crosshair; margin: 0 7px 8px; user-select: none; }
-#selection { position: absolute; top: 0; bottom: 0; background: #a9e9b14d; border-top: 1px solid #b2eab7; border-bottom: 1px solid #b2eab7; }
-.handle { position: absolute; top: -3px; bottom: -3px; width: 14px; padding: 0; border-radius: 4px; background: #b2eab7; border: 2px solid #101319; cursor: ew-resize; z-index: 2; }
+#selection { position: absolute; top: 0; bottom: 0; background: #b52b694d; border-top: 1px solid #b52b69; border-bottom: 1px solid #b52b69; }
+.handle { position: absolute; top: -3px; bottom: -3px; width: 14px; padding: 0; border-radius: 4px; background: #b52b69; border: 2px solid #101319; cursor: ew-resize; z-index: 2; }
 .handle.start { left: -7px; }
 .handle.end { right: -7px; }
 #playhead { position: absolute; width: 2px; top: 0; bottom: 0; background: white; pointer-events: none; }
@@ -43,9 +43,9 @@ body.dragging #drop-hint { display: flex; }
 .speed button:first-child { border-radius: 6px 0 0 6px; }
 .speed button:last-child { border-radius: 0 6px 6px 0; }
 #speed { width: 65px; font-variant-numeric: tabular-nums; }
-button[aria-pressed=true] { border-color: #b2eab7; color: #b2eab7; }
+button[aria-pressed=true] { background: #b52b69; border-color: #d74c8b; color: #ffffff; }
 .volume { margin-left: auto; display: flex; align-items: center; gap: 6px; color: #9ca9bc; font-size: 11px; }
-#volume { width: 80px; accent-color: #b2eab7; }
+#volume { width: 80px; accent-color: #b52b69; }
 #status { font-size: 10px; color: #9ca9bc; margin: 0 0 7px; min-height: 12px; }
 [hidden] { display: none !important; }
 @media(max-width: 760px) { .controls { padding-inline: 10px; } button { padding: 6px 8px; } .toolbar, .center-controls { gap: 6px; } #volume { width: 60px; } }
@@ -108,7 +108,7 @@ body {
   .controls { padding-top: 4px; }
   .seek { margin: 3px 0; }
   #loop-track { height: 20px; margin-bottom: 6px; }
-  #status.shortcut-hint { display: none; }
+
   .loop-caption { margin-bottom: 3px; }
   .empty-icon, #empty small { display: none; }
   #empty h2 { margin: 0; font-size: 17px; }
@@ -135,3 +135,21 @@ button, input, label { touch-action: manipulation; }
   #open { grid-column: 1; grid-row: 2; }
   .right-controls { grid-column: 2; grid-row: 2; }
 }
+
+/* Empty-player artwork is decorative and disappears with the whole empty state. */
+#empty { display: flex; align-items: center; justify-content: center; gap: clamp(12px, 4vw, 48px); width: min(92%, 760px); height: 100%; max-height: 100%; padding: 12px 0; }
+.empty-copy { flex: 1; min-width: 0; }
+#empty-art { display: block; width: clamp(70px, 24vw, 240px); max-width: 40%; max-height: 85%; height: auto; object-fit: contain; opacity: .5; flex-shrink: 1; }
+.empty-icon { color: #f477ad; }
+@media (max-width: 480px) {
+  #empty { gap: 12px; }
+  #empty h2 { font-size: 18px; }
+  #empty p { font-size: 12px; line-height: 1.4; }
+  #empty small { font-size: 10px; }
+}
+
+/* Keyboard hints are desktop-only; status and error messages stay visible. */
+.mobile-device #status.shortcut-hint { display: none; }
+
+/* Pink tint preserves the artwork's shading and existing 50% opacity. */
+#empty-art { filter: grayscale(1) sepia(1) saturate(3) hue-rotate(285deg); }

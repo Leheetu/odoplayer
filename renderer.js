@@ -294,6 +294,7 @@ const fullscreenButton = $('fullscreen');
 const mobilePlatform = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 const desktopModeIPad = /Mac/i.test(navigator.platform) && navigator.maxTouchPoints > 1;
 fullscreenButton.hidden = !(mobilePlatform || desktopModeIPad);
+document.body.classList.toggle('mobile-device', mobilePlatform || desktopModeIPad);
 function fullscreenElement() { return document.fullscreenElement || document.webkitFullscreenElement; }
 function standaloneMode() { return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; }
 function updateFullscreenButton() {
