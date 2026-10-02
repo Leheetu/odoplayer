@@ -290,6 +290,10 @@ tick();
 
 // Whole-page fullscreen keeps OdoPlayer's crop, mirror, and custom HUD intact.
 const fullscreenButton = $('fullscreen');
+// iPadOS can identify itself as macOS when requesting desktop websites.
+const mobilePlatform = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+const desktopModeIPad = /Mac/i.test(navigator.platform) && navigator.maxTouchPoints > 1;
+fullscreenButton.hidden = !(mobilePlatform || desktopModeIPad);
 function fullscreenElement() { return document.fullscreenElement || document.webkitFullscreenElement; }
 function standaloneMode() { return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; }
 function updateFullscreenButton() {
