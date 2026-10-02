@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; media-src 'self' blob:; connect-src 'none'; object-src 'none'; base-uri 'none'">
+  <title>OdoPlayer</title>
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="model.js"></script>
+  <script defer src="renderer.js"></script>
+</head>
+<body>
+  <input id="file" type="file" accept="video/*,.mp4,.m4v,.webm,.mov" hidden>
+  <main>
+    <section id="stage" aria-label="Video display">
+      <div id="video-frame"><video id="video" playsinline></video></div>
+      <div id="crop-outline" hidden aria-hidden="true"></div>
+      <div id="empty"><div class="empty-icon">▶</div><h2>Your practice starts here</h2><p>Drop an MP4 here or choose Open video</p><small>Your videos stay on this computer.</small></div>
+      <div id="drop-hint">Drop to open video</div>
+    </section>
+    <section id="hud" class="controls" aria-label="Playback controls">
+      <div class="info"><strong id="filename">No video loaded</strong><span id="clock">0:00.0 / 0:00.0</span></div>
+      <input id="seek" class="seek" type="range" min="0" max="100" step="0.01" value="0" aria-label="Playback position" disabled>
+      <div class="loop-caption"><span>LOOP REGION</span><span id="loop-label"></span></div>
+      <div id="loop-track" aria-label="Drag to select a loop region">
+        <div id="selection" hidden><button id="handle-start" class="handle start" aria-label="Loop start; arrow keys adjust" role="slider" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0"></button><button id="handle-end" class="handle end" aria-label="Loop end; arrow keys adjust" role="slider" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0"></button></div>
+        <div id="playhead"></div>
+      </div>
+      <p id="status" role="status">Space: play/stop · R: restart video · L: loop on/off · ← →: seek 5s · − +: speed</p>
+      <div class="toolbar">
+        <button id="open">Open Video</button>
+        <div class="center-controls">
+          <button id="mirror" aria-pressed="false">Mirror</button>
+          <div class="group speed"><button id="slower" aria-label="Decrease speed by 10 percentage points">−</button><button id="speed" title="Reset to normal speed">100%</button><button id="faster" aria-label="Increase speed by 10 percentage points">+</button></div>
+          <button id="play" class="primary" disabled>Play</button>
+          <button id="loop-toggle" aria-pressed="false" disabled>Loop off</button>
+          <button id="clear-crop" hidden>Clear Crop</button>
+        </div>
+        <label class="volume">Volume <input id="volume" type="range" min="0" max="1" step="0.01" value="1"></label>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
