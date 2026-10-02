@@ -18,7 +18,7 @@
     <section id="stage" aria-label="Video display">
       <div id="video-frame"><video id="video" playsinline></video></div>
       <div id="crop-outline" hidden aria-hidden="true"></div>
-      <div id="empty"><div class="empty-copy"><div class="empty-icon">▶</div><h2>Select a video</h2><p>Select 'Open Video' or drag &amp; drop</p><small>The video stays on your device.</small></div><img id="empty-art" src="pipasentopng.png" alt="" draggable="false"></div>
+      <div id="empty"><div class="empty-copy"><button id="empty-open" type="button" aria-label="Open video" title="Open video"></button><div class="empty-icon">▶</div><h2>Select a video</h2><p>Select 'Open Video' or drag &amp; drop</p><small>The video stays on your device.</small></div><img id="empty-art" src="pipasentopng.png" alt="" draggable="false"></div>
       <div id="drop-hint">Drop to open video</div>
     </section>
     <section id="hud" class="controls" aria-label="Playback controls">
@@ -34,10 +34,10 @@
         <button id="open">Open Video</button>
         <div class="center-controls">
           <button id="mirror" aria-pressed="false">Mirror</button>
-          <div class="group speed"><button id="slower" aria-label="Decrease speed by 10 percentage points">−</button><button id="speed" title="Reset to normal speed">100%</button><button id="faster" aria-label="Increase speed by 10 percentage points">+</button></div>
+          <div class="speed-setting"><span class="speed-title">Speed</span><div class="group speed"><button id="slower" aria-label="Decrease speed by 10 percentage points">−</button><button id="speed" title="Reset to normal speed">100%</button><button id="faster" aria-label="Increase speed by 10 percentage points">+</button></div></div>
           <button id="play" class="primary" disabled>Play</button>
           <button id="loop-toggle" aria-pressed="false" disabled>Loop off</button>
-          <button id="clear-crop" hidden>Clear Crop</button>
+          <button id="clear-crop" disabled>Drag video to Crop</button>
         </div>
         <div class="right-controls">
           <label class="volume">Volume <input id="volume" type="range" min="0" max="1" step="0.01" value="1"></label>

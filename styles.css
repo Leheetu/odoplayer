@@ -153,3 +153,34 @@ button, input, label { touch-action: manipulation; }
 
 /* Pink tint preserves the artwork's shading and existing 50% opacity. */
 #empty-art { filter: grayscale(1) sepia(1) saturate(3) hue-rotate(285deg); }
+
+.speed-setting { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.speed-title { color: #9ca9bc; font-size: 8px; line-height: 1; font-weight: 400; }
+.center-controls { align-items: flex-end; }
+#clear-crop { min-width: 108px; }
+#clear-crop:disabled, #clear-crop:disabled:hover {
+  background: #14171d;
+  border-color: #1c2028;
+  color: #3e424c;
+  font-size: 9px;
+  font-weight: 400;
+  opacity: 1;
+  cursor: default;
+}
+
+/* Invisible, keyboard-accessible picker target around the empty-state copy. */
+.empty-copy { position: relative; }
+#empty-open, #empty-open:hover, #empty-open:active {
+  position: absolute;
+  inset: -20px -8px;
+  width: calc(100% + 16px);
+  height: calc(100% + 40px);
+  z-index: 2;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+#empty-open:focus-visible { outline: 2px solid #f477ad; outline-offset: 2px; }

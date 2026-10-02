@@ -52,7 +52,7 @@ function status(message) {
 }
 function renderLoop() {
   $('selection').hidden = !loop;
-  $('loop-toggle').disabled = !loop;
+  $('loop-toggle').disabled = !ready();
   $('selection').classList.toggle('inactive', !loopEnabled);
   $('loop-toggle').textContent = loopEnabled ? 'Loop on' : 'Loop off';
   $('loop-toggle').setAttribute('aria-pressed', String(loopEnabled));
@@ -102,7 +102,7 @@ document.addEventListener('drop', event => { event.preventDefault(); document.bo
 video.addEventListener('loadedmetadata', () => {
   if (!ready()) { status('This file has no usable video duration. Try an H.264 MP4.'); return; }
   for (const id of ['play', 'seek']) $(id).disabled = false;
-  $('seek').max = video.duration; setSpeed(speed); updatePosition(); showHUD();
+  $('seek').max = video.duration; setSpeed(speed); updatePosition(); renderLoop(); showHUD();
   status('Space: play/stop · R: restart video · L: loop on/off · ← →: seek 5s · − +: speed');
 });
 video.addEventListener('error', () => { if (video.getAttribute('src')) status('Cannot play this file. Try an MP4 encoded with H.264 video and AAC audio.'); });
@@ -164,7 +164,8 @@ function setCrop(value) {
   crop = value;
   stage.classList.toggle('crop-active', Boolean(crop));
   document.body.classList.toggle('has-crop', Boolean(crop));
-  $('clear-crop').hidden = !crop;
+  $('clear-crop').disabled = !crop;
+  $('clear-crop').textContent = crop ? 'Clear Crop' : 'Drag video to Crop';
   layoutVideo();
   showHUD();
 }
@@ -229,7 +230,13 @@ $('speed').addEventListener('click', () => setSpeed(1));
 $('volume').addEventListener('input', event => { video.volume = Number(event.target.value); });
 $('mirror').addEventListener('click', () => { const mirrored = video.classList.toggle('mirrored'); $('mirror').setAttribute('aria-pressed', String(mirrored)); cancelCropGesture(); layoutVideo(); });
 function toggleLoop() {
-  if (!loop || !ready()) return;
+  if (!ready()) return;
+  if (!loop) {
+    // Trim at the file end; if already ended, select its final playable moment.
+    const start = clamp(video.currentTime, 0, Math.max(0, video.duration - 0.1));
+    loop = { start, end: Math.min(start + 10, video.duration) };
+    loopEnabled = false;
+  }
   loopEnabled = !loopEnabled;
   if (loopEnabled) video.currentTime = loop.start;
   renderLoop();
@@ -336,3 +343,10 @@ document.addEventListener('fullscreenchange', updateFullscreenButton);
 document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
 document.addEventListener('fullscreenerror', () => status('Full-screen was blocked by the browser. Try opening OdoPlayer from your Home Screen.'));
 document.addEventListener('webkitfullscreenerror', () => status('Full-screen was blocked by the browser. Try opening OdoPlayer from your Home Screen.'));
+
+// The empty-player message and play icon share the native file picker.
+$('empty-open').addEventListener('click', event => {
+  event.stopPropagation();
+  $('file').click();
+});
+$('empty-open').addEventListener('pointerdown', event => event.stopPropagation());
