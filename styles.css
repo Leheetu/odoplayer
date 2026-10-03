@@ -226,3 +226,35 @@ button, input, label { touch-action: manipulation; }
   font-variant-numeric: tabular-nums;
   text-shadow: 0 2px 18px #000000, 0 0 42px #b52b6980;
 }
+
+/* Compact, mutually exclusive count-in settings immediately after Play. */
+.countdown-setting { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+#countdown-title { color: #9ca9bc; font-size: 8px; line-height: 1; font-weight: 400; }
+.countdown-options { display: flex; gap: 0; }
+.countdown-options button { font-size: 11px; padding: 7px 8px; border-radius: 0; }
+.countdown-options button:first-child { border-radius: 6px 0 0 6px; }
+.countdown-options button:last-child { border-radius: 0 6px 6px 0; border-left: 0; }
+#app-version { color: #656b77; text-align: right; font-size: 8px; line-height: 10px; margin-top: 4px; }
+.no-video #app-version { display: none !important; }
+@media (max-width: 1100px) {
+  .toolbar { grid-template-columns: auto minmax(0, 1fr); }
+  .center-controls { grid-column: 1 / -1; grid-row: 1; justify-content: center; }
+  #open { grid-column: 1; grid-row: 2; }
+  .right-controls { grid-column: 2; grid-row: 2; }
+  .no-video #open, .no-video .right-controls { grid-row: 1; }
+}
+
+/* Initial screen download and release label; playback retains the tiny bottom-right label. */
+#offline-download { display: none; }
+.no-video .toolbar { grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; }
+.no-video #offline-download { display: flex; flex-direction: column; align-items: center; justify-self: start; grid-column: 2; grid-row: 1; max-width: 100%; }
+.no-video .right-controls { grid-column: 3; grid-row: 1; }
+#download-offline { display: block; padding: 12px 18px; border: 1px solid #d34180; border-radius: 7px; background: #b52b69; color: #fff; font-size: 14px; font-weight: 600; text-align: center; text-decoration: none; touch-action: manipulation; }
+#download-offline:hover { background: #c73577; }
+#download-offline:focus-visible { outline: 2px solid #f477ad; outline-offset: 2px; }
+.download-version { color: #9ca9bc; font-size: 11px; line-height: 14px; margin-top: 4px; }
+@media (max-width: 680px) {
+  .no-video .toolbar { grid-template-columns: auto minmax(0, 1fr); }
+  .no-video .right-controls { grid-column: 1 / -1; grid-row: 2; }
+  #download-offline { padding: 10px 12px; font-size: 12px; }
+}

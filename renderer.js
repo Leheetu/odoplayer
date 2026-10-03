@@ -35,8 +35,9 @@ function showHUD() {
   hud.inert = false;
   if (!video.paused) idleTimer = setTimeout(hideHUD, HUD_IDLE_MS);
 }
-function hideHUD() {
-  if (!ready() || video.error || video.paused) return;
+function hideHUD(forCountdown = false) {
+  // The final count-in beat hides the HUD while the video is still held paused.
+  if (!ready() || video.error || (video.paused && !forCountdown)) return;
   if (drag || pointerHeld) { idleTimer = setTimeout(hideHUD, HUD_IDLE_MS); return; }
   if (hud.contains(document.activeElement)) document.activeElement.blur();
   hud.inert = true;
@@ -101,6 +102,16 @@ function setSpeed(value) {
 // The count-in uses synthesized Web Audio ticks, so no sound file or network is needed.
 let countdown = null, countdownAudio = null, countdownTick = null, countdownReady = false;
 const countdownOverlay = $('countdown');
+let countdownSeconds = 4;
+// Changing the duration cancels a pending count-in; only one option is active.
+for (const seconds of [4, 8]) {
+  $('countdown-' + seconds).addEventListener('click', () => {
+    if (countdownSeconds === seconds) return;
+    cancelCountdown();
+    countdownSeconds = seconds;
+    for (const option of [4, 8]) $('countdown-' + option).setAttribute('aria-pressed', String(option === seconds));
+  });
+}
 function syncPlaybackButton() {
   $('play').textContent = countdown ? 'Cancel' : video.paused ? 'Play' : 'Stop';
 }
@@ -110,6 +121,7 @@ function stopCountdownTick() {
   countdownTick = null;
 }
 function cancelCountdown() {
+  if (countdown) showHUD();
   if (countdown) clearTimeout(countdown.timer);
   countdown = null;
   countdownReady = false;
@@ -125,12 +137,15 @@ function soundCountdownTick(state, number) {
     const oscillator = countdownAudio.createOscillator();
     const gain = countdownAudio.createGain();
     const now = countdownAudio.currentTime;
+    // Accentuate the starts of four-beat groups: 8 and 4.
+    const accented = number === 8 || number === 4;
+    const tickLength = accented ? 0.105 : 0.065;
     oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(1100, now);
-    oscillator.frequency.exponentialRampToValueAtTime(750, now + 0.06);
+    oscillator.frequency.setValueAtTime(accented ? 1450 : 1100, now);
+    oscillator.frequency.exponentialRampToValueAtTime(accented ? 950 : 750, now + tickLength - 0.005);
     gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.09 * volume, now + 0.005);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.065);
+    gain.gain.exponentialRampToValueAtTime((accented ? 0.15 : 0.09) * volume, now + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + tickLength);
     oscillator.connect(gain);
     gain.connect(countdownAudio.destination);
     countdownTick = oscillator;
@@ -139,7 +154,7 @@ function soundCountdownTick(state, number) {
       if (countdownTick === oscillator) countdownTick = null;
     };
     oscillator.start(now);
-    oscillator.stop(now + 0.075);
+    oscillator.stop(now + tickLength + 0.01);
   } catch (_) { /* Keep the visual count-in available even if audio is blocked. */ }
 }
 async function startVideoNow() {
@@ -150,12 +165,13 @@ async function startVideoNow() {
     if (error.name === 'AbortError') return;
     if (error.name === 'NotAllowedError' && countdownReady) status('Countdown complete — tap Play to start.');
     else status(`Could not play this file: ${error.message}`);
+    showHUD();
     syncPlaybackButton();
   }
 }
 function beginCountdown() {
   cancelCountdown();
-  const state = { number: 3, timer: null };
+  const state = { number: countdownSeconds, initial: countdownSeconds, timer: null };
   countdown = state;
   video.currentTime = 0;
   // Authorize this media element during the original tap, then immediately hold it paused.
@@ -166,7 +182,7 @@ function beginCountdown() {
     if (priming) priming.catch(() => {});
   } catch (_) { video.pause(); }
   countdownOverlay.hidden = false;
-  countdownOverlay.textContent = '3';
+  countdownOverlay.textContent = String(state.number);
   syncPlaybackButton();
   showHUD();
   try {
@@ -174,8 +190,8 @@ function beginCountdown() {
     if (Audio) {
       if (!countdownAudio || countdownAudio.state === 'closed') countdownAudio = new Audio();
       // Resume from the user's tap, not from a timer, for mobile audio permission.
-      if (countdownAudio.state !== 'running') countdownAudio.resume().then(() => soundCountdownTick(state, 3)).catch(() => {});
-      else soundCountdownTick(state, 3);
+      if (countdownAudio.state !== 'running') countdownAudio.resume().then(() => soundCountdownTick(state, state.initial)).catch(() => {});
+      else soundCountdownTick(state, state.initial);
     }
   } catch (_) { /* The countdown remains usable without sound support. */ }
   function nextNumber() {
@@ -190,6 +206,7 @@ function beginCountdown() {
       return;
     }
     countdownOverlay.textContent = String(state.number);
+    if (state.number === 1) hideHUD(true);
     soundCountdownTick(state, state.number);
     state.timer = setTimeout(nextNumber, 1000);
   }
@@ -242,7 +259,11 @@ video.addEventListener('loadedmetadata', () => {
   status('Space: play/stop · R: restart video · L: loop on/off · ← →: seek 5s · − +: speed');
 });
 video.addEventListener('error', () => { cancelCountdown(); if (video.getAttribute('src')) status('Cannot play this file. Try an MP4 encoded with H.264 video and AAC audio.'); });
-video.addEventListener('play', () => { syncPlaybackButton(); showHUD(); });
+// Preserve the HUD hidden by the last count-in beat when playback starts.
+video.addEventListener('play', () => {
+  syncPlaybackButton();
+  if (!document.body.classList.contains('hud-hidden')) showHUD();
+});
 video.addEventListener('pause', () => { syncPlaybackButton(); showHUD(); });
 function togglePlayback() {
   if (countdown) { cancelCountdown(); return; }
@@ -377,11 +398,15 @@ function restart() {
 }
 // Seeking outside the enabled region disables looping so playback can continue from the chosen time.
 function seek(time) {
-  if (!ready()) return;
-  cancelCountdown();
-  if (loopEnabled && loop && (time < loop.start || time >= loop.end)) { loopEnabled = false; renderLoop(); }
-  video.currentTime = clamp(time, 0, video.duration);
-}
+    if (!ready()) return;
+    const wasLoopEnabled = loopEnabled;
+    cancelCountdown();
+    if (loopEnabled && loop && (time < loop.start || time >= loop.end)) { loopEnabled = false; renderLoop(); }
+    video.currentTime = clamp(time, 0, video.duration);
+    // A user seek to the start counts in even during playback. Active-loop seeks skip it,
+    // including seeks that leave the loop region; internal loop rewinds never call this helper.
+    if (!wasLoopEnabled && video.currentTime <= 0.05) beginCountdown();
+  }
 // Wire the timeline, speed, volume, and mirror controls to their shared playback helpers.
 $('seek').addEventListener('input', event => seek(Number(event.target.value)));
 $('slower').addEventListener('click', () => setSpeed(speedStep(speed, -1)));
