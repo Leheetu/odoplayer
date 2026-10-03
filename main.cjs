@@ -6,7 +6,7 @@ const fs = require('node:fs');
 let localServer, playerURL;
 // A loopback-only page supplies the genuine HTTP origin/referrer required by YouTube embeds.
 function startLocalPage() {
-  const allowed = new Set(['index.html', 'model.js', 'media.js', 'renderer.js', 'styles.css', 'pipasentopng.png', 'odoplayerlogo_small.png', 'OdoPlayer_v15_Offline.html']);
+  const allowed = new Set(['index.html', 'model.js', 'media.js', 'renderer.js', 'styles.css', 'pipasentopng.png', 'odoplayerlogo_small.png', 'OdoPlayer_v16_Offline.html']);
   const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png' };
   localServer = http.createServer((request, response) => {
     const name = new URL(request.url, 'http://localhost').pathname.slice(1) || 'index.html';

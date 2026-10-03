@@ -1,4 +1,4 @@
-# OdoPlayer v15
+# OdoPlayer v16
 
 Choose **Select a File** (or drag/drop) for local video/audio, or paste a YouTube video link to load its official embedded player. **Switch Dance** unloads the current source and returns to these choices.
 
@@ -6,12 +6,12 @@ Choose **Select a File** (or drag/drop) for local video/audio, or paste a YouTub
 - Local speed changes in 10-percentage-point steps. YouTube uses the next playback rate supported by that video, and reports the actual applied rate.
 - Local video supports mirror and crop. YouTube mirrors the whole embed; cropping is disabled. Audio shows its filename and hides mirror/crop.
 - Beginning countdowns are available when looping is off and playback starts from zero. Seeking to zero while paused waits for Play; while playing it starts the countdown.
-- YouTube's own controls remain available. Keyboard events inside its cross-origin iframe cannot reach OdoPlayer; use OdoPlayer's controls to restore shortcut focus. The bottom HUD stays visible for audio and YouTube so those controls remain reachable.
+- YouTube's built-in control bar is hidden; OdoPlayer provides transport controls. Keyboard events inside its cross-origin iframe cannot reach OdoPlayer; use OdoPlayer's controls to restore shortcut focus. The bottom HUD stays visible for audio and YouTube so those controls remain reachable.
 - YouTube looping uses network seeks and is not frame-perfect. Ads, browser autoplay restrictions, and videos that disallow embedding are controlled by YouTube. If automatic playback is blocked, use Play again or YouTube's play button.
 
 ## Web and offline releases
 
-Upload index.html, styles.css, model.js, media.js, renderer.js, pipasentopng.png, odoplayerlogo_small.png, and OdoPlayer_v15_Offline.html to the same hosted directory. GitHub Pages works without a build step or an API key.
+Upload index.html, styles.css, model.js, media.js, renderer.js, pipasentopng.png, odoplayerlogo_small.png, and OdoPlayer_v16_Offline.html to the same hosted directory. GitHub Pages works without a build step or an API key.
 
 The single HTML release embeds all local code and images; local files work without internet. The offline release displays “YouTube is unavailable in the Offline version” instead of a link field. Use the hosted page or **Start Player.cmd** for YouTube playback with an internet connection. The desktop app serves only its allowlisted assets on a random loopback port, not on the local network.
 
@@ -21,7 +21,7 @@ Run **Start Player.cmd** for the current source, or use npm start. npm test runs
 
 ## Backup
 
-OdoPlayer_v13_Source_Backup contains the unmodified pre-YouTube root files and tests. File hashes were verified before implementing v15.
+OdoPlayer_v13_Source_Backup contains the unmodified pre-YouTube root files and tests. File hashes were verified before implementing v16.
 
 ## Previous documentation
 

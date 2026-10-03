@@ -315,3 +315,16 @@ button, input, label { touch-action: manipulation; }
   #empty { padding-block: 6px; align-items: safe center; }
   .upload-section p { display: none; }
 }
+
+/* Simple entry divider and a truly centered download/version block. */
+.upload-section { border-bottom: 0; }
+#empty .entry-divider { display: block; text-align: center; margin: 0; color: #9ca9bc; }
+.no-video .toolbar { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+.no-video #offline-download { grid-column: 2; grid-row: 1; justify-self: center; }
+.no-video .right-controls { grid-column: 3; grid-row: 1; }
+#app-version { text-align: center; }
+@media (max-width: 680px) {
+  .no-video .toolbar { grid-template-columns: minmax(0, 1fr); }
+  .no-video #offline-download { grid-column: 1; grid-row: 1; }
+  .no-video .right-controls { grid-column: 1; grid-row: 2; }
+}

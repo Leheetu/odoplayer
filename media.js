@@ -79,7 +79,8 @@
         await loadAPI(); if (generation !== this.generation) return;
         this.container.hidden = false;
         const target = document.createElement('div'); this.container.append(target);
-        const vars = { playsinline: 1, controls: 1, disablekb: 1, rel: 0, fs: 0 };
+        // Use the documented control-bar setting; OdoPlayer supplies the timeline and transport.
+        const vars = { playsinline: 1, controls: 0, disablekb: 1, rel: 0, fs: 0 };
         if (/^https?:$/.test(location.protocol)) vars.origin = location.origin;
         this.readyTimer = setTimeout(() => { if (generation === this.generation && !this.metadataSent) this.fail('YouTube did not finish loading. This video may not allow embedding. Try another link or open the hosted OdoPlayer page.'); }, 20000);
         this.player = new YT.Player(target, { width: '100%', height: '100%', videoId: id, playerVars: vars, events: {

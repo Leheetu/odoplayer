@@ -33,8 +33,9 @@
       <div id="countdown" role="status" aria-live="assertive" aria-atomic="true" hidden></div>
       <!-- Empty-state instructions, invisible picker hit area, and decorative image; hidden after loading a file. -->
       <div id="empty"><div class="entry-options">
-        <section class="upload-section"><button id="empty-open" type="button" class="primary">Select a File</button><p>or drag &amp; drop</p><small>The file stays on your device.</small></section>
-        <section class="youtube-section"><label for="youtube-url">YouTube link:</label><input id="youtube-url" type="url" placeholder="Paste a YouTube link" autocomplete="off" spellcheck="false"><small>YouTube requires an internet connection.</small><p id="entry-error" role="status"></p></section>
+        <section class="upload-section"><button id="empty-open" type="button" class="primary">Select a File</button></section>
+        <p class="entry-divider">---OR---</p>
+        <section class="youtube-section"><input id="youtube-url" type="url" aria-label="YouTube link" placeholder="Paste a YouTube link" autocomplete="off" spellcheck="false"><p id="entry-error" role="status"></p></section>
       </div><img id="empty-art" src="pipasentopng.png" alt="" draggable="false"></div>
       <!-- Drag-and-drop overlay, shown while a file is dragged over the player. -->
       <div id="drop-hint">Drop to open file</div>
@@ -56,7 +57,7 @@
       <div class="toolbar">
         <button id="open">Switch Dance</button>
         <!-- The hosted page offers the matching self-contained release before a video is loaded. -->
-        <div id="offline-download"><a id="download-offline" href="OdoPlayer_v15_Offline.html" download="OdoPlayer_v15_Offline.html">Download OdoPlayer (Offline Version)</a><span class="download-version">v15</span></div>
+        <div id="offline-download"><a id="download-offline" href="OdoPlayer_v16_Offline.html" download="OdoPlayer_v16_Offline.html">Download OdoPlayer (Offline Version)</a><span class="download-version">v16</span></div>
         <div class="center-controls">
           <button id="mirror" aria-pressed="false">Mirror</button>
           <div class="speed-setting"><span class="speed-title">Speed</span><div class="group speed"><button id="slower" aria-label="Decrease playback speed">v</button><button id="speed" title="Reset to normal speed">100%</button><button id="faster" aria-label="Increase playback speed">^</button></div></div>
@@ -73,7 +74,7 @@
         </div>
       </div>
       <!-- Release label lives inside the HUD so it hides with the controls. -->
-      <footer id="app-version">v15</footer>
+      <footer id="app-version">v16</footer>
     </section>
   </main>
 <!-- Fixed tooltip stays above the pointer without being clipped by the HUD. -->
