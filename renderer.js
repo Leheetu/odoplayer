@@ -510,28 +510,31 @@ function finishDrag(cancelled) {
 track.addEventListener('pointerup', () => finishDrag(false));
 track.addEventListener('pointercancel', () => finishDrag(true));
 track.addEventListener('lostpointercapture', () => finishDrag(true));
-// Focused loop handles also support fine keyboard adjustment for accessibility.
-for (const side of ['start', 'end']) $(`handle-${side}`).addEventListener('keydown', event => {
-  if (!loop || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
-  event.preventDefault(); event.stopPropagation();
-  const delta = (event.key === 'ArrowRight' ? 1 : -1) * (event.shiftKey ? 1 : 0.1);
-  loop[side] = side === 'start' ? clamp(loop.start + delta, 0, loop.end - 0.1) : clamp(loop.end + delta, loop.start + 0.1, video.duration);
-  renderLoop();
+// Pointer-operated controls relinquish focus after activation, without suppressing their clicks.
+// Tab navigation still works; transport shortcuts below take priority over native button/range keys.
+document.addEventListener('click', event => {
+  const control = event.target.closest('button, a, input[type="range"]');
+  if (event.detail > 0 && control && control === document.activeElement) control.blur();
 });
-// Global shortcuts: R and L also work with a focused control; other keys defer to native control behavior.
+// Capture transport keys before focused controls can turn Space into another button click.
 document.addEventListener('keydown', event => {
-  if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 'r') {
-    event.preventDefault(); if (!event.repeat) restart(); return;
-  }
-  if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 'l') {
-    event.preventDefault(); if (!event.repeat) toggleLoop(); return;
-  }
-  if (event.ctrlKey || event.metaKey || event.altKey || ['INPUT', 'BUTTON'].includes(event.target.tagName)) return;
-  if (event.code === 'Space') { event.preventDefault(); togglePlayback(); }
-  else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); seek(video.currentTime + (event.key === 'ArrowRight' ? 5 : -5)); }
-  else if (event.key === '-' || event.key === '_') setSpeed(speedStep(speed, -1));
+  if (event.ctrlKey || event.metaKey || event.altKey) return;
+  const target = event.target;
+  if (target.isContentEditable || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' ||
+      (target.tagName === 'INPUT' && !['range', 'button', 'submit', 'reset'].includes(target.type))) return;
+  if (event.code === 'Space' || event.key === ' ') {
+    event.preventDefault(); event.stopPropagation();
+    if (!event.repeat) togglePlayback();
+  } else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+    event.preventDefault(); event.stopPropagation();
+    seek(video.currentTime + (event.key === 'ArrowRight' ? 5 : -5));
+  } else if (event.key.toLowerCase() === 'r') {
+    event.preventDefault(); if (!event.repeat) restart();
+  } else if (event.key.toLowerCase() === 'l') {
+    event.preventDefault(); if (!event.repeat) toggleLoop();
+  } else if (event.key === '-' || event.key === '_') setSpeed(speedStep(speed, -1));
   else if (event.key === '+' || event.key === '=') setSpeed(speedStep(speed, 1));
-});
+}, true);
 // Jump back at the loop endpoint; skip enforcement during seeking or an unfinished loop drag.
 function enforceLoop() {
   if (loopEnabled && loop && !drag && !video.seeking && !video.paused && video.currentTime >= loop.end) video.currentTime = loop.start;
