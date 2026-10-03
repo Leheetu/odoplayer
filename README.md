@@ -1,6 +1,6 @@
-# OdoPlayer v14
+# OdoPlayer v15
 
-Choose **Upload file** (or drag/drop) for local video/audio, or paste a YouTube video link to load its official embedded player. **Switch Dance** unloads the current source and returns to these choices.
+Choose **Select a File** (or drag/drop) for local video/audio, or paste a YouTube video link to load its official embedded player. **Switch Dance** unloads the current source and returns to these choices.
 
 - **Space** toggles play/stop; **Left/Right** seek five seconds; **Down/Up** decrease/increase speed; **L** toggles looping; **R** restarts without looping.
 - Local speed changes in 10-percentage-point steps. YouTube uses the next playback rate supported by that video, and reports the actual applied rate.
@@ -11,9 +11,9 @@ Choose **Upload file** (or drag/drop) for local video/audio, or paste a YouTube 
 
 ## Web and offline releases
 
-Upload index.html, styles.css, model.js, media.js, renderer.js, pipasentopng.png, odoplayerlogo_small.png, and OdoPlayer_v14_Offline.html to the same hosted directory. GitHub Pages works without a build step or an API key.
+Upload index.html, styles.css, model.js, media.js, renderer.js, pipasentopng.png, odoplayerlogo_small.png, and OdoPlayer_v15_Offline.html to the same hosted directory. GitHub Pages works without a build step or an API key.
 
-The single HTML release embeds all local code and images; local files work without internet. YouTube always needs internet and may reject file:// pages for missing HTTP referrer (error 153). Use the hosted page or **Start Player.cmd** for reliable YouTube embedding. The desktop app serves only its allowlisted assets on a random loopback port, not on the local network.
+The single HTML release embeds all local code and images; local files work without internet. The offline release displays “YouTube is unavailable in the Offline version” instead of a link field. Use the hosted page or **Start Player.cmd** for YouTube playback with an internet connection. The desktop app serves only its allowlisted assets on a random loopback port, not on the local network.
 
 ## Run and build
 
@@ -21,7 +21,7 @@ Run **Start Player.cmd** for the current source, or use npm start. npm test runs
 
 ## Backup
 
-OdoPlayer_v13_Source_Backup contains the unmodified pre-YouTube root files and tests. File hashes were verified before implementing v14.
+OdoPlayer_v13_Source_Backup contains the unmodified pre-YouTube root files and tests. File hashes were verified before implementing v15.
 
 ## Previous documentation
 
