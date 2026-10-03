@@ -33,9 +33,11 @@ function showHUD() {
   clearTimeout(idleTimer);
   document.body.classList.remove('hud-hidden');
   hud.inert = false;
-  if (!video.paused) idleTimer = setTimeout(hideHUD, HUD_IDLE_MS);
+  if (!video.paused && !document.body.classList.contains('audio-only')) idleTimer = setTimeout(hideHUD, HUD_IDLE_MS);
 }
 function hideHUD(forCountdown = false) {
+  // Audio has no video surface to expand: keep its controls visible, including during count-ins.
+  if (document.body.classList.contains('audio-only')) { showHUD(); return; }
   // The final count-in beat hides the HUD while the video is still held paused.
   if (!ready() || video.error || (video.paused && !forCountdown)) return;
   if (drag || pointerHeld) { idleTimer = setTimeout(hideHUD, HUD_IDLE_MS); return; }
