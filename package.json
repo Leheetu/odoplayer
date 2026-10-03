@@ -25,7 +25,7 @@
       "pipasentopng.png",
       "media.js",
       "odoplayerlogo_small.png",
-      "OdoPlayer_v15_Offline.html"
+      "OdoPlayer_v14_Offline.html"
     ],
     "win": {
       "target": "portable",

@@ -297,9 +297,7 @@ function switchDance() {
   document.body.classList.remove('audio-only', 'youtube-mode', 'counting-down');
   document.body.classList.add('no-video');
   $('empty').hidden = false; $('audio-title').hidden = true;
-  // The offline entry page has no YouTube input.
-  if ($('youtube-url')) $('youtube-url').value = '';
-  $('entry-error').textContent = '';
+  $('youtube-url').value = ''; $('entry-error').textContent = '';
   $('filename').textContent = 'No file loaded'; $('file').value = '';
   for (const id of ['play', 'seek']) $(id).disabled = true;
   $('seek').max = 100; $('seek').value = 0;
@@ -314,7 +312,6 @@ function load(file) {
   media.loadFile(file); status('Loading file…');
 }
 function loadYouTube(value) {
-  if (document.body.classList.contains('offline-build')) return;
   const id = parseYouTubeId(value);
   if (!id) { $('entry-error').textContent = value.trim() ? 'Paste a valid YouTube video link.' : ''; return; }
   switchDance(); document.body.classList.remove('no-video'); document.body.classList.add('youtube-mode');
@@ -323,8 +320,8 @@ function loadYouTube(value) {
   $('crop-tooltip').textContent = 'Cropping disabled for youtube videos';
   status('Loading YouTube…'); media.loadYouTube(id);
 }
-$('youtube-url')?.addEventListener('input', event => loadYouTube(event.target.value));
-$('youtube-url')?.addEventListener('keydown', event => { if (event.key === 'Enter') loadYouTube(event.target.value); });
+$('youtube-url').addEventListener('input', event => loadYouTube(event.target.value));
+$('youtube-url').addEventListener('keydown', event => { if (event.key === 'Enter') loadYouTube(event.target.value); });
 $('open').addEventListener('click', switchDance);
 // Native file selection and drag-and-drop both feed the local-file loader.
 $('file').addEventListener('change', event => { load(event.target.files[0]); event.target.value = ''; });
