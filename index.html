@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
   <!-- Mobile viewport sizing, local-resource policy, and iOS Home Screen presentation. -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; media-src 'self' blob:; connect-src 'none'; object-src 'none'; base-uri 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.youtube.com https://s.ytimg.com; frame-src https://www.youtube.com https://www.youtube-nocookie.com; style-src 'self' 'unsafe-inline'; media-src 'self' blob:; connect-src 'none'; object-src 'none'; base-uri 'none'">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="OdoPlayer">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,6 +15,7 @@
   <!-- Load shared helpers before the renderer; deferred scripts run after the markup is parsed. -->
   <link rel="stylesheet" href="styles.css">
   <script defer src="model.js"></script>
+  <script defer src="media.js"></script>
   <script defer src="renderer.js"></script>
 </head>
 <body class="no-video">
@@ -22,6 +24,7 @@
   <main>
     <!-- Playback surface: the clipping frame enables view-only zoom and the outline previews a crop. -->
     <section id="stage" aria-label="Video display">
+      <div id="youtube-view" hidden></div>
       <div id="video-frame"><video id="video" playsinline></video></div>
       <!-- Audio uses the same media engine, with its filename in place of video pixels. -->
       <div id="audio-title" hidden></div>
@@ -29,7 +32,10 @@
       <!-- Count-in is outside the video frame so cropping/mirroring cannot alter it. -->
       <div id="countdown" role="status" aria-live="assertive" aria-atomic="true" hidden></div>
       <!-- Empty-state instructions, invisible picker hit area, and decorative image; hidden after loading a file. -->
-      <div id="empty"><div class="empty-copy"><button id="empty-open" type="button" aria-label="Open file" title="Open file"></button><div class="empty-icon">▶</div><h2>Select a file</h2><p>Select 'Open File' or drag &amp; drop</p><small>The file stays on your device.</small></div><img id="empty-art" src="pipasentopng.png" alt="" draggable="false"></div>
+      <div id="empty"><div class="entry-options">
+        <section class="upload-section"><button id="empty-open" type="button" class="primary">Select a File</button><p>or drag &amp; drop</p><small>The file stays on your device.</small></section>
+        <section class="youtube-section"><label for="youtube-url">YouTube link:</label><input id="youtube-url" type="url" placeholder="Paste a YouTube link" autocomplete="off" spellcheck="false"><small>YouTube requires an internet connection.</small><p id="entry-error" role="status"></p></section>
+      </div><img id="empty-art" src="pipasentopng.png" alt="" draggable="false"></div>
       <!-- Drag-and-drop overlay, shown while a file is dragged over the player. -->
       <div id="drop-hint">Drop to open file</div>
     </section>
@@ -45,15 +51,15 @@
         <div id="playhead"></div>
       </div>
       <!-- Live status/error messages; keyboard hints are hidden on mobile by CSS. -->
-      <p id="status" class="shortcut-hint" role="status">Space: play/stop · R: restart video · L: loop on/off · ← →: seek 5s · − +: speed</p>
+      <p id="status" class="shortcut-hint" role="status">Space: play/stop · R: restart video · L: loop on/off · ← →: seek 5s · ↓ ↑: speed</p>
       <!-- Main controls: file picker at left, practice controls centered, volume/fullscreen at right. -->
       <div class="toolbar">
-        <button id="open">Open File</button>
+        <button id="open">Switch Dance</button>
         <!-- The hosted page offers the matching self-contained release before a video is loaded. -->
-        <div id="offline-download"><a id="download-offline" href="OdoPlayer_v13_Offline.html" download="OdoPlayer_v13_Offline.html">Download OdoPlayer (Offline Version)</a><span class="download-version">v13</span></div>
+        <div id="offline-download"><a id="download-offline" href="OdoPlayer_v15_Offline.html" download="OdoPlayer_v15_Offline.html">Download OdoPlayer (Offline Version)</a><span class="download-version">v15</span></div>
         <div class="center-controls">
           <button id="mirror" aria-pressed="false">Mirror</button>
-          <div class="speed-setting"><span class="speed-title">Speed</span><div class="group speed"><button id="slower" aria-label="Decrease speed by 10 percentage points">−</button><button id="speed" title="Reset to normal speed">100%</button><button id="faster" aria-label="Increase speed by 10 percentage points">+</button></div></div>
+          <div class="speed-setting"><span class="speed-title">Speed</span><div class="group speed"><button id="slower" aria-label="Decrease playback speed">v</button><button id="speed" title="Reset to normal speed">100%</button><button id="faster" aria-label="Increase playback speed">^</button></div></div>
           <button id="loop-toggle" aria-pressed="false" disabled>Loop off</button>
           <button id="play" class="primary" disabled>Play</button>
           <!-- Exactly one duration is selected; it applies to the next count-in. -->
@@ -67,7 +73,7 @@
         </div>
       </div>
       <!-- Release label lives inside the HUD so it hides with the controls. -->
-      <footer id="app-version">v13</footer>
+      <footer id="app-version">v15</footer>
     </section>
   </main>
 <!-- Fixed tooltip stays above the pointer without being clipped by the HUD. -->

@@ -1,9 +1,10 @@
 // Browser entry point: DOM references and in-memory playback/loop state. No video data is uploaded.
 const $ = id => document.getElementById(id);
 const video = $('video');
+const media = new PracticeMedia(video, $('youtube-view'));
 const { clamp, speedStep, region, format } = PlayerModel;
-let sourceURL, loop = null, loopEnabled = false, drag = null, speed = 1;
-const ready = () => Number.isFinite(video.duration) && video.duration > 0;
+let loop = null, loopEnabled = false, drag = null, speed = 1;
+const ready = () => Number.isFinite(media.duration) && media.duration > 0;
 const hud = $('hud');
 // Safari's visible viewport changes as its toolbars open and close.
 let viewportFrame = 0;
@@ -33,13 +34,13 @@ function showHUD() {
   clearTimeout(idleTimer);
   document.body.classList.remove('hud-hidden');
   hud.inert = false;
-  if (!video.paused && !document.body.classList.contains('audio-only')) idleTimer = setTimeout(hideHUD, HUD_IDLE_MS);
+  if (!media.paused && !(document.body.classList.contains('audio-only') || media.isYouTube)) idleTimer = setTimeout(hideHUD, HUD_IDLE_MS);
 }
 function hideHUD(forCountdown = false) {
   // Audio has no video surface to expand: keep its controls visible, including during count-ins.
-  if (document.body.classList.contains('audio-only')) { showHUD(); return; }
+  if (document.body.classList.contains('audio-only') || media.isYouTube) { showHUD(); return; }
   // The final count-in beat hides the HUD while the video is still held paused.
-  if (!ready() || video.error || (video.paused && !forCountdown)) return;
+  if (!ready() || media.error || (media.paused && !forCountdown)) return;
   if (drag || pointerHeld) { idleTimer = setTimeout(hideHUD, HUD_IDLE_MS); return; }
   if (hud.contains(document.activeElement)) document.activeElement.blur();
   $('countdown-tooltip').hidden = true;
@@ -91,27 +92,41 @@ function renderLoop() {
   $('loop-toggle').setAttribute('aria-pressed', String(loopEnabled));
   $('loop-label').textContent = loop ? `${format(loop.start)} → ${format(loop.end)}` : '';
   if (!loop || !ready()) return;
-  $('selection').style.left = `${loop.start / video.duration * 100}%`;
-  $('selection').style.width = `${(loop.end - loop.start) / video.duration * 100}%`;
+  $('selection').style.left = `${loop.start / media.duration * 100}%`;
+  $('selection').style.width = `${(loop.end - loop.start) / media.duration * 100}%`;
   for (const [name, value] of [['start', loop.start], ['end', loop.end]]) {
     const handle = $(`handle-${name}`);
-    handle.setAttribute('aria-valuemax', video.duration);
+    handle.setAttribute('aria-valuemax', media.duration);
     handle.setAttribute('aria-valuenow', value);
     handle.setAttribute('aria-valuetext', format(value));
   }
 }
 // Keep the seek slider, elapsed-time display, and loop-strip playhead synchronized.
 function updatePosition() {
-  $('clock').textContent = `${format(video.currentTime)} / ${format(video.duration)}`;
-  $('seek').value = video.currentTime;
-  $('playhead').style.left = `${ready() ? video.currentTime / video.duration * 100 : 0}%`;
+  $('clock').textContent = `${format(media.currentTime)} / ${format(media.duration)}`;
+  $('seek').value = media.currentTime;
+  $('playhead').style.left = `${ready() ? media.currentTime / media.duration * 100 : 0}%`;
 }
 // Apply playback speed with pitch correction and update the percentage and limit buttons.
-function setSpeed(value) {
-  speed = value; video.playbackRate = value; video.preservesPitch = true;
-  $('speed').textContent = `${Math.round(value * 100)}%`;
-  $('slower').disabled = value <= 0.2; $('faster').disabled = value >= 2;
+function updateSpeedControls() {
+  speed = media.playbackRate;
+  $('speed').textContent = Math.round(speed * 100) + '%';
+  const rates = media.rates;
+  $('slower').disabled = rates ? !rates.some(rate => rate < speed) : speed <= 0.2;
+  $('faster').disabled = rates ? !rates.some(rate => rate > speed) : speed >= 2;
 }
+function setSpeed(value) {
+  media.playbackRate = value; video.preservesPitch = true;
+  updateSpeedControls();
+}
+function changeSpeed(direction) {
+  const rates = media.rates;
+  if (!rates) { setSpeed(speedStep(speed, direction)); return; }
+  const available = [...rates].sort((a,b) => a-b);
+  const next = direction > 0 ? available.find(rate => rate > speed) : available.reverse().find(rate => rate < speed);
+  if (next !== undefined) setSpeed(next);
+}
+media.addEventListener('ratechange', updateSpeedControls);
 // The count-in uses synthesized Web Audio ticks, so no sound file or network is needed.
 let countdown = null, countdownAudio = null, countdownTick = null, countdownReady = false;
 const countdownOverlay = $('countdown');
@@ -155,7 +170,7 @@ countdownOptions.addEventListener('pointermove', showCountdownTooltip);
 countdownOptions.addEventListener('pointerleave', () => { countdownTooltip.hidden = true; });
 window.addEventListener('blur', () => { countdownTooltip.hidden = true; });
 function syncPlaybackButton() {
-  $('play').textContent = countdown ? 'Cancel' : video.paused ? 'Play' : 'Stop';
+  $('play').textContent = countdown ? 'Cancel' : media.paused ? 'Play' : 'Stop';
 }
 function stopCountdownTick() {
   if (!countdownTick) return;
@@ -169,11 +184,12 @@ function cancelCountdown() {
   countdownReady = false;
   stopCountdownTick();
   countdownOverlay.hidden = true;
+  document.body.classList.remove('counting-down');
   syncPlaybackButton();
 }
 function soundCountdownTick(state, number) {
   if (countdown !== state || state.number !== number || !countdownAudio || countdownAudio.state !== 'running') return;
-  const volume = video.muted ? 0 : Number($('volume').value);
+  const volume = media.muted ? 0 : Number($('volume').value);
   if (!volume) return;
   try {
     const oscillator = countdownAudio.createOscillator();
@@ -201,7 +217,7 @@ function soundCountdownTick(state, number) {
 }
 async function startVideoNow() {
   try {
-    await video.play();
+    await media.play();
     countdownReady = false;
   } catch (error) {
     if (error.name === 'AbortError') return;
@@ -215,14 +231,15 @@ function beginCountdown() {
   cancelCountdown();
   const state = { number: countdownSeconds, initial: countdownSeconds, timer: null };
   countdown = state;
-  video.currentTime = 0;
+  media.currentTime = 0;
   // Authorize this media element during the original tap, then immediately hold it paused.
   // This helps Safari permit the real play request after the countdown timer finishes.
   try {
-    const priming = video.play();
-    video.pause();
+    const priming = media.isYouTube ? null : media.play();
+    media.pause();
     if (priming) priming.catch(() => {});
-  } catch (_) { video.pause(); }
+  } catch (_) { media.pause(); }
+  document.body.classList.add('counting-down');
   countdownOverlay.hidden = false;
   countdownOverlay.textContent = String(state.number);
   syncPlaybackButton();
@@ -242,6 +259,7 @@ function beginCountdown() {
     if (state.number === 0) {
       countdown = null;
       countdownOverlay.hidden = true;
+      document.body.classList.remove('counting-down');
       countdownReady = true;
       syncPlaybackButton();
       startVideoNow();
@@ -257,8 +275,8 @@ function beginCountdown() {
 // Only a user start at the beginning without looping gets a count-in. Resumes do not.
 async function play() {
   if (!ready() || countdown) return;
-  if (loopEnabled && loop && (video.currentTime < loop.start || video.currentTime >= loop.end)) video.currentTime = loop.start;
-  if (!loopEnabled && video.paused && video.currentTime <= 0.05 && !countdownReady) {
+  if (loopEnabled && loop && (media.currentTime < loop.start || media.currentTime >= loop.end)) media.currentTime = loop.start;
+  if (!loopEnabled && media.paused && media.currentTime <= 0.05 && !countdownReady) {
     beginCountdown();
     return;
   }
@@ -266,57 +284,83 @@ async function play() {
 }
 // Do not unexpectedly start playback after changing tabs or seeking during a countdown.
 document.addEventListener('visibilitychange', () => { if (document.hidden) cancelCountdown(); });
-video.addEventListener('seeking', () => { if (countdown && video.currentTime > 0.05) cancelCountdown(); });
-video.addEventListener('emptied', cancelCountdown);
+media.addEventListener('seeking', () => { if (countdown && media.currentTime > 0.05) cancelCountdown(); });
+media.addEventListener('emptied', cancelCountdown);
 document.addEventListener('keydown', event => { if (event.key === 'Escape' && countdown) cancelCountdown(); });
 
-// Replace the local blob URL, release the previous file, and reset crop/loop state for a new video.
+// Switch Dance releases either source and resets practice state before returning to the entry page.
+function switchDance() {
+  cancelCountdown(); media.unload();
+  loop = null; loopEnabled = false; drag = null; speed = 1;
+  setCrop(null); video.classList.remove('mirrored'); $('youtube-view').classList.remove('mirrored');
+  $('mirror').setAttribute('aria-pressed', 'false');
+  document.body.classList.remove('audio-only', 'youtube-mode', 'counting-down');
+  document.body.classList.add('no-video');
+  $('empty').hidden = false; $('audio-title').hidden = true;
+  // The offline entry page has no YouTube input.
+  if ($('youtube-url')) $('youtube-url').value = '';
+  $('entry-error').textContent = '';
+  $('filename').textContent = 'No file loaded'; $('file').value = '';
+  for (const id of ['play', 'seek']) $(id).disabled = true;
+  $('seek').max = 100; $('seek').value = 0;
+  $('clear-crop').textContent = 'Drag video to Crop';
+  $('crop-tooltip').textContent = 'Click and drag the video view to crop it!';
+  renderLoop(); updatePosition(); setSpeed(1); status(''); showHUD();
+}
 function load(file) {
   if (!file) return;
-  cancelCountdown();
-  document.body.classList.add('no-video');
-  setCrop(null);
-  showHUD();
-  video.pause(); video.removeAttribute('src'); video.load();
-  if (sourceURL) URL.revokeObjectURL(sourceURL);
-  loop = null; loopEnabled = false; drag = null; renderLoop();
-  for (const id of ['play', 'seek']) $(id).disabled = true;
-  $('empty').hidden = true; $('filename').textContent = file.name;
-  $('audio-title').textContent = file.name;
-  $('audio-title').hidden = true;
-  document.body.classList.remove('audio-only');
-  sourceURL = URL.createObjectURL(file); video.src = sourceURL;
-  status('Loading file…');
+  switchDance(); $('empty').hidden = true;
+  $('filename').textContent = file.name; $('audio-title').textContent = file.name;
+  media.loadFile(file); status('Loading file…');
 }
-// Native file selection and drag-and-drop both feed the same local-file loader.
-$('open').addEventListener('click', () => { cancelCountdown(); $('file').click(); });
+function loadYouTube(value) {
+  if (document.body.classList.contains('offline-build')) return;
+  const id = parseYouTubeId(value);
+  if (!id) { $('entry-error').textContent = value.trim() ? 'Paste a valid YouTube video link.' : ''; return; }
+  switchDance(); document.body.classList.remove('no-video'); document.body.classList.add('youtube-mode');
+  $('empty').hidden = true; $('filename').textContent = 'Loading YouTube…';
+  $('clear-crop').disabled = true; $('clear-crop').textContent = 'Crop unavailable';
+  $('crop-tooltip').textContent = 'Cropping disabled for youtube videos';
+  status('Loading YouTube…'); media.loadYouTube(id);
+}
+$('youtube-url')?.addEventListener('input', event => loadYouTube(event.target.value));
+$('youtube-url')?.addEventListener('keydown', event => { if (event.key === 'Enter') loadYouTube(event.target.value); });
+$('open').addEventListener('click', switchDance);
+// Native file selection and drag-and-drop both feed the local-file loader.
 $('file').addEventListener('change', event => { load(event.target.files[0]); event.target.value = ''; });
 document.addEventListener('dragover', event => { event.preventDefault(); showHUD(); document.body.classList.add('dragging'); });
 document.addEventListener('dragleave', event => { if (!event.relatedTarget) document.body.classList.remove('dragging'); });
 document.addEventListener('drop', event => { event.preventDefault(); document.body.classList.remove('dragging'); load(event.dataTransfer.files[0]); });
 // Enable controls once duration is known; follow video events for errors and Play/Stop labels.
-video.addEventListener('loadedmetadata', () => {
+media.addEventListener('loadedmetadata', () => {
   if (!ready()) { status('This file has no usable media duration. Try an MP4 video or MP3 audio file.'); return; }
   // Reveal the playback HUD only after a usable video has loaded.
   document.body.classList.remove('no-video');
   // Inspect decoded tracks rather than extensions, which may be missing or misleading.
-  const audioOnly = video.videoWidth === 0 && video.videoHeight === 0;
+  const audioOnly = !media.isYouTube && video.videoWidth === 0 && video.videoHeight === 0;
+  if (media.isYouTube) $('filename').textContent = media.title;
   document.body.classList.toggle('audio-only', audioOnly);
   $('audio-title').hidden = !audioOnly;
   for (const id of ['play', 'seek']) $(id).disabled = false;
-  $('seek').max = video.duration; setSpeed(speed); updatePosition(); renderLoop(); showHUD();
-  status('Space: play/stop · R: restart video · L: loop on/off · ← →: seek 5s · − +: speed');
+  $('seek').max = media.duration; setSpeed(speed); updatePosition(); renderLoop(); showHUD();
+  status('Space: play/stop · R: restart video · L: loop on/off · ← →: seek 5s · ↓ ↑: speed');
 });
-video.addEventListener('error', () => { cancelCountdown(); if (video.getAttribute('src')) status('Cannot play this file. Try an MP3 audio file or an MP4 encoded with H.264 video and AAC audio.'); });
+media.addEventListener('error', () => {
+  cancelCountdown();
+  status(media.isYouTube ? media.error.message : 'Cannot play this file. Try an MP3 audio file or an MP4 encoded with H.264 video and AAC audio.');
+  showHUD();
+});
+media.addEventListener('autoplayblocked', () => { countdownReady = media.currentTime <= 0.05; status('YouTube blocked automatic playback. Press Play again or use the YouTube play button.'); showHUD(); });
 // Preserve the HUD hidden by the last count-in beat when playback starts.
-video.addEventListener('play', () => {
+media.addEventListener('play', () => {
+  if (media.isYouTube && countdown) { media.pause(); return; }
   syncPlaybackButton();
   if (!document.body.classList.contains('hud-hidden')) showHUD();
 });
-video.addEventListener('pause', () => { syncPlaybackButton(); showHUD(); });
+media.addEventListener('pause', () => { syncPlaybackButton(); showHUD(); });
 function togglePlayback() {
   if (countdown) { cancelCountdown(); return; }
-  video.paused ? play() : video.pause();
+  media.paused ? play() : media.pause();
 }
 $('play').addEventListener('click', togglePlayback);
 // Crops are stored in original video pixels, independent of display size/mirroring.
@@ -326,7 +370,7 @@ const cropOutline = $('crop-outline');
 let crop = null, cropGesture = null;
 // Fit the selected source rectangle into the stage without stretching; calculate letterbox offsets.
 function viewGeometry() {
-  if (!video.videoWidth || !video.videoHeight) return null;
+  if (media.isYouTube || !video.videoWidth || !video.videoHeight) return null;
   const bounds = stage.getBoundingClientRect();
   const area = crop || { x: 0, y: 0, width: video.videoWidth, height: video.videoHeight };
   const scale = Math.min(bounds.width / area.width, bounds.height / area.height);
@@ -436,55 +480,55 @@ document.addEventListener('keydown', event => {
 });
 $('clear-crop').addEventListener('click', () => setCrop(null));
 new ResizeObserver(layoutVideo).observe(stage);
-video.addEventListener('loadedmetadata', layoutVideo);
-video.addEventListener('resize', layoutVideo);
+media.addEventListener('loadedmetadata', layoutVideo);
+media.addEventListener('resize', layoutVideo);
 
 // Restart the whole file; retain the selected loop but switch looping off.
 function restart() {
   if (!ready()) return;
   cancelCountdown();
-  video.pause();
+  media.pause();
   loopEnabled = false; renderLoop();
-  video.currentTime = 0;
+  media.currentTime = 0;
   play();
 }
 // Seeking outside the enabled region disables looping so playback can continue from the chosen time.
 function seek(time) {
     if (!ready()) return;
     const wasLoopEnabled = loopEnabled;
-    const wasPlaying = !video.paused;
+    const wasPlaying = !media.paused;
     cancelCountdown();
     if (loopEnabled && loop && (time < loop.start || time >= loop.end)) { loopEnabled = false; renderLoop(); }
-    video.currentTime = clamp(time, 0, video.duration);
+    media.currentTime = clamp(time, 0, media.duration);
     // Only an already-playing video counts in after seeking to the start; paused videos await Play. Active-loop seeks skip it,
     // including seeks that leave the loop region; internal loop rewinds never call this helper.
-    if (wasPlaying && !wasLoopEnabled && video.currentTime <= 0.05) beginCountdown();
+    if (wasPlaying && !wasLoopEnabled && media.currentTime <= 0.05) beginCountdown();
   }
 // Wire the timeline, speed, volume, and mirror controls to their shared playback helpers.
 $('seek').addEventListener('input', event => seek(Number(event.target.value)));
-$('slower').addEventListener('click', () => setSpeed(speedStep(speed, -1)));
-$('faster').addEventListener('click', () => setSpeed(speedStep(speed, 1)));
+$('slower').addEventListener('click', () => changeSpeed(-1));
+$('faster').addEventListener('click', () => changeSpeed(1));
 $('speed').addEventListener('click', () => setSpeed(1));
-$('volume').addEventListener('input', event => { video.volume = Number(event.target.value); });
-$('mirror').addEventListener('click', () => { const mirrored = video.classList.toggle('mirrored'); $('mirror').setAttribute('aria-pressed', String(mirrored)); cancelCropGesture(); layoutVideo(); });
+$('volume').addEventListener('input', event => { media.volume = Number(event.target.value); });
+$('mirror').addEventListener('click', () => { const mirrored = video.classList.toggle('mirrored'); $('youtube-view').classList.toggle('mirrored', mirrored); $('mirror').setAttribute('aria-pressed', String(mirrored)); cancelCropGesture(); layoutVideo(); });
 // Create a default ten-second selection only when none exists; later toggles reuse the selection.
 function toggleLoop() {
   if (!ready()) return;
   cancelCountdown();
   if (!loop) {
     // Trim at the file end; if already ended, select its final playable moment.
-    const start = clamp(video.currentTime, 0, Math.max(0, video.duration - 0.1));
-    loop = { start, end: Math.min(start + 10, video.duration) };
+    const start = clamp(media.currentTime, 0, Math.max(0, media.duration - 0.1));
+    loop = { start, end: Math.min(start + 10, media.duration) };
     loopEnabled = false;
   }
   loopEnabled = !loopEnabled;
-  if (loopEnabled) video.currentTime = loop.start;
+  if (loopEnabled) media.currentTime = loop.start;
   renderLoop();
 }
 $('loop-toggle').addEventListener('click', toggleLoop);
 // Loop-strip gestures: convert pointer positions to seconds and create or resize a selected region.
 const track = $('loop-track');
-function pointerTime(event) { const box = track.getBoundingClientRect(); return clamp((event.clientX - box.left) / box.width, 0, 1) * video.duration; }
+function pointerTime(event) { const box = track.getBoundingClientRect(); return clamp((event.clientX - box.left) / box.width, 0, 1) * media.duration; }
 track.addEventListener('pointerdown', event => {
   if (!ready() || event.button !== 0) return;
   cancelCountdown();
@@ -495,16 +539,16 @@ track.addEventListener('pointerdown', event => {
 track.addEventListener('pointermove', event => {
   if (!drag) return;
   const time = pointerTime(event);
-  if (drag.mode === 'new') loop = region(drag.anchor, time, video.duration);
+  if (drag.mode === 'new') loop = region(drag.anchor, time, media.duration);
   else if (drag.mode === 'start') loop.start = clamp(time, 0, loop.end - Math.min(0.1, loop.end));
-  else loop.end = clamp(time, loop.start + Math.min(0.1, video.duration - loop.start), video.duration);
+  else loop.end = clamp(time, loop.start + Math.min(0.1, media.duration - loop.start), media.duration);
   renderLoop();
 });
 // Commit valid loop drags; cancelled or tiny selections restore the previous loop.
 function finishDrag(cancelled) {
   if (!drag) return;
   if (cancelled || !loop || loop.end - loop.start < 0.1) { loop = drag.previous; loopEnabled = drag.enabled; }
-  else { loopEnabled = true; if (video.currentTime < loop.start || video.currentTime >= loop.end) video.currentTime = loop.start; }
+  else { loopEnabled = true; if (media.currentTime < loop.start || media.currentTime >= loop.end) media.currentTime = loop.start; }
   drag = null; renderLoop();
 }
 track.addEventListener('pointerup', () => finishDrag(false));
@@ -527,22 +571,23 @@ document.addEventListener('keydown', event => {
     if (!event.repeat) togglePlayback();
   } else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
     event.preventDefault(); event.stopPropagation();
-    seek(video.currentTime + (event.key === 'ArrowRight' ? 5 : -5));
+    seek(media.currentTime + (event.key === 'ArrowRight' ? 5 : -5));
   } else if (event.key.toLowerCase() === 'r') {
     event.preventDefault(); if (!event.repeat) restart();
   } else if (event.key.toLowerCase() === 'l') {
     event.preventDefault(); if (!event.repeat) toggleLoop();
-  } else if (event.key === '-' || event.key === '_') setSpeed(speedStep(speed, -1));
-  else if (event.key === '+' || event.key === '=') setSpeed(speedStep(speed, 1));
+  } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    event.preventDefault(); event.stopPropagation(); changeSpeed(event.key === 'ArrowUp' ? 1 : -1);
+  }
 }, true);
 // Jump back at the loop endpoint; skip enforcement during seeking or an unfinished loop drag.
 function enforceLoop() {
-  if (loopEnabled && loop && !drag && !video.seeking && !video.paused && video.currentTime >= loop.end) video.currentTime = loop.start;
+  if (loopEnabled && loop && !drag && !media.seeking && !media.paused && media.currentTime >= loop.end) media.currentTime = loop.start;
 }
 // Media events and animation frames keep the UI responsive and handle loops reaching the file end.
-video.addEventListener('timeupdate', () => { enforceLoop(); updatePosition(); });
-video.addEventListener('ended', () => { if (loopEnabled && loop) { video.currentTime = loop.start; play(); } });
-function tick() { enforceLoop(); if (!video.paused) updatePosition(); requestAnimationFrame(tick); }
+media.addEventListener('timeupdate', () => { enforceLoop(); updatePosition(); });
+media.addEventListener('ended', () => { if (loopEnabled && loop) { media.currentTime = loop.start; play(); } });
+function tick() { enforceLoop(); if (!media.paused) updatePosition(); requestAnimationFrame(tick); }
 tick();
 
 // Whole-page fullscreen keeps OdoPlayer's crop, mirror, and custom HUD intact.

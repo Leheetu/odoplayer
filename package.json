@@ -1,0 +1,42 @@
+{
+  "name": "odoplayer",
+  "version": "0.4.0",
+  "description": "Local video practice player with region looping and speed controls",
+  "private": true,
+  "main": "main.cjs",
+  "author": "",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test tests/*.test.cjs",
+    "build:win": "electron-builder --win portable --x64"
+  },
+  "build": {
+    "appId": "com.odoplayer.app",
+    "productName": "OdoPlayer",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.cjs",
+      "index.html",
+      "styles.css",
+      "renderer.js",
+      "model.js",
+      "pipasentopng.png",
+      "media.js",
+      "odoplayerlogo_small.png",
+      "OdoPlayer_v15_Offline.html"
+    ],
+    "win": {
+      "target": "portable",
+      "signExecutable": false
+    },
+    "portable": {
+      "artifactName": "OdoPlayer-${version}-Windows.exe"
+    }
+  },
+  "devDependencies": {
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3"
+  }
+}
