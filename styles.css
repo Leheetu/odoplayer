@@ -280,3 +280,38 @@ button, input, label { touch-action: manipulation; }
 .audio-only #mirror, .audio-only #crop-control { display: none; }
 /* The offline build replaces its download link with a release label in the same location. */
 .offline-build .download-version { font-size: 14px; line-height: 20px; margin: 6px 0; }
+
+/* Two entry choices replace the invisible upload hit area. */
+#empty { overflow: auto; }
+.entry-options { width: min(420px, 100%); pointer-events: auto; }
+.upload-section, .youtube-section { display: flex; flex-direction: column; align-items: stretch; gap: 8px; padding: 14px 0; }
+.upload-section { border-bottom: 1px solid #39303a; }
+.upload-section p { margin: 0; }
+#empty #empty-open, #empty #empty-open:hover, #empty #empty-open:active { position: static; inset: auto; width: 100%; height: auto; min-height: 44px; padding: 12px 20px; border: 1px solid #d74c8b; background: #b52b69; font-size: 18px; }
+.youtube-section label { font-size: 16px; color: #edf2f7; text-align: left; }
+#youtube-url { width: 100%; min-width: 0; padding: 11px; border: 1px solid #654052; border-radius: 6px; background: #16131a; color: #fff; font: inherit; font-size: 16px; }
+#entry-error { margin: 0; color: #ff9fb7; font-size: 12px; }
+.no-video #open { display: none; }
+.no-video .toolbar { grid-template-columns: minmax(0, 1fr) auto; }
+.no-video #offline-download { grid-column: 1; }
+.no-video .right-controls { grid-column: 2; grid-row: 1; }
+#youtube-view { position: absolute; inset: 0; min-width: 200px; min-height: 200px; }
+#youtube-view iframe { display: block; width: 100%; height: 100%; border: 0; }
+#youtube-view.mirrored { transform: scaleX(-1); }
+.youtube-mode #video-frame { display: none; }
+/* Show the count-in before the embed, instead of covering YouTube's controls/branding. */
+.youtube-mode.counting-down #youtube-view { visibility: hidden; }
+@media (max-height: 450px) {
+  .upload-section, .youtube-section { padding: 6px 0; gap: 4px; }
+  #empty #empty-open { min-height: 34px; padding: 6px 12px; }
+  #youtube-url { padding: 7px; }
+}
+@media (max-width: 480px) {
+  #empty-art { max-width: 25%; }
+  .no-video .right-controls { grid-column: 1 / -1; grid-row: 2; }
+}
+
+@media (max-height: 450px) {
+  #empty { padding-block: 6px; align-items: safe center; }
+  .upload-section p { display: none; }
+}
