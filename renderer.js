@@ -98,15 +98,123 @@ function setSpeed(value) {
   $('speed').textContent = `${Math.round(value * 100)}%`;
   $('slower').disabled = value <= 0.2; $('faster').disabled = value >= 2;
 }
-// Start playback within the enabled loop and report browser playback errors.
-async function play() {
-  if (!ready()) return;
-  if (loopEnabled && loop && (video.currentTime < loop.start || video.currentTime >= loop.end)) video.currentTime = loop.start;
-  try { await video.play(); } catch (error) { if (error.name !== 'AbortError') status(`Could not play this file: ${error.message}`); }
+// The count-in uses synthesized Web Audio ticks, so no sound file or network is needed.
+let countdown = null, countdownAudio = null, countdownTick = null, countdownReady = false;
+const countdownOverlay = $('countdown');
+function syncPlaybackButton() {
+  $('play').textContent = countdown ? 'Cancel' : video.paused ? 'Play' : 'Stop';
 }
+function stopCountdownTick() {
+  if (!countdownTick) return;
+  try { countdownTick.stop(); } catch (_) { /* Already stopped. */ }
+  countdownTick = null;
+}
+function cancelCountdown() {
+  if (countdown) clearTimeout(countdown.timer);
+  countdown = null;
+  countdownReady = false;
+  stopCountdownTick();
+  countdownOverlay.hidden = true;
+  syncPlaybackButton();
+}
+function soundCountdownTick(state, number) {
+  if (countdown !== state || state.number !== number || !countdownAudio || countdownAudio.state !== 'running') return;
+  const volume = video.muted ? 0 : Number($('volume').value);
+  if (!volume) return;
+  try {
+    const oscillator = countdownAudio.createOscillator();
+    const gain = countdownAudio.createGain();
+    const now = countdownAudio.currentTime;
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(1100, now);
+    oscillator.frequency.exponentialRampToValueAtTime(750, now + 0.06);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.09 * volume, now + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.065);
+    oscillator.connect(gain);
+    gain.connect(countdownAudio.destination);
+    countdownTick = oscillator;
+    oscillator.onended = () => {
+      oscillator.disconnect(); gain.disconnect();
+      if (countdownTick === oscillator) countdownTick = null;
+    };
+    oscillator.start(now);
+    oscillator.stop(now + 0.075);
+  } catch (_) { /* Keep the visual count-in available even if audio is blocked. */ }
+}
+async function startVideoNow() {
+  try {
+    await video.play();
+    countdownReady = false;
+  } catch (error) {
+    if (error.name === 'AbortError') return;
+    if (error.name === 'NotAllowedError' && countdownReady) status('Countdown complete — tap Play to start.');
+    else status(`Could not play this file: ${error.message}`);
+    syncPlaybackButton();
+  }
+}
+function beginCountdown() {
+  cancelCountdown();
+  const state = { number: 3, timer: null };
+  countdown = state;
+  video.currentTime = 0;
+  // Authorize this media element during the original tap, then immediately hold it paused.
+  // This helps Safari permit the real play request after the countdown timer finishes.
+  try {
+    const priming = video.play();
+    video.pause();
+    if (priming) priming.catch(() => {});
+  } catch (_) { video.pause(); }
+  countdownOverlay.hidden = false;
+  countdownOverlay.textContent = '3';
+  syncPlaybackButton();
+  showHUD();
+  try {
+    const Audio = window.AudioContext || window.webkitAudioContext;
+    if (Audio) {
+      if (!countdownAudio || countdownAudio.state === 'closed') countdownAudio = new Audio();
+      // Resume from the user's tap, not from a timer, for mobile audio permission.
+      if (countdownAudio.state !== 'running') countdownAudio.resume().then(() => soundCountdownTick(state, 3)).catch(() => {});
+      else soundCountdownTick(state, 3);
+    }
+  } catch (_) { /* The countdown remains usable without sound support. */ }
+  function nextNumber() {
+    if (countdown !== state) return;
+    state.number -= 1;
+    if (state.number === 0) {
+      countdown = null;
+      countdownOverlay.hidden = true;
+      countdownReady = true;
+      syncPlaybackButton();
+      startVideoNow();
+      return;
+    }
+    countdownOverlay.textContent = String(state.number);
+    soundCountdownTick(state, state.number);
+    state.timer = setTimeout(nextNumber, 1000);
+  }
+  state.timer = setTimeout(nextNumber, 1000);
+}
+// Only a user start at the beginning without looping gets a count-in. Resumes do not.
+async function play() {
+  if (!ready() || countdown) return;
+  if (loopEnabled && loop && (video.currentTime < loop.start || video.currentTime >= loop.end)) video.currentTime = loop.start;
+  if (!loopEnabled && video.paused && video.currentTime <= 0.05 && !countdownReady) {
+    beginCountdown();
+    return;
+  }
+  return startVideoNow();
+}
+// Do not unexpectedly start playback after changing tabs or seeking during a countdown.
+document.addEventListener('visibilitychange', () => { if (document.hidden) cancelCountdown(); });
+video.addEventListener('seeking', () => { if (countdown && video.currentTime > 0.05) cancelCountdown(); });
+video.addEventListener('emptied', cancelCountdown);
+document.addEventListener('keydown', event => { if (event.key === 'Escape' && countdown) cancelCountdown(); });
+
 // Replace the local blob URL, release the previous file, and reset crop/loop state for a new video.
 function load(file) {
   if (!file) return;
+  cancelCountdown();
   document.body.classList.add('no-video');
   setCrop(null);
   showHUD();
@@ -119,7 +227,7 @@ function load(file) {
   status('Loading video…');
 }
 // Native file selection and drag-and-drop both feed the same local-file loader.
-$('open').addEventListener('click', () => $('file').click());
+$('open').addEventListener('click', () => { cancelCountdown(); $('file').click(); });
 $('file').addEventListener('change', event => { load(event.target.files[0]); event.target.value = ''; });
 document.addEventListener('dragover', event => { event.preventDefault(); showHUD(); document.body.classList.add('dragging'); });
 document.addEventListener('dragleave', event => { if (!event.relatedTarget) document.body.classList.remove('dragging'); });
@@ -133,10 +241,13 @@ video.addEventListener('loadedmetadata', () => {
   $('seek').max = video.duration; setSpeed(speed); updatePosition(); renderLoop(); showHUD();
   status('Space: play/stop · R: restart video · L: loop on/off · ← →: seek 5s · − +: speed');
 });
-video.addEventListener('error', () => { if (video.getAttribute('src')) status('Cannot play this file. Try an MP4 encoded with H.264 video and AAC audio.'); });
-video.addEventListener('play', () => { $('play').textContent = 'Stop'; showHUD(); });
-video.addEventListener('pause', () => { $('play').textContent = 'Play'; showHUD(); });
-function togglePlayback() { video.paused ? play() : video.pause(); }
+video.addEventListener('error', () => { cancelCountdown(); if (video.getAttribute('src')) status('Cannot play this file. Try an MP4 encoded with H.264 video and AAC audio.'); });
+video.addEventListener('play', () => { syncPlaybackButton(); showHUD(); });
+video.addEventListener('pause', () => { syncPlaybackButton(); showHUD(); });
+function togglePlayback() {
+  if (countdown) { cancelCountdown(); return; }
+  video.paused ? play() : video.pause();
+}
 $('play').addEventListener('click', togglePlayback);
 // Crops are stored in original video pixels, independent of display size/mirroring.
 const stage = $('stage');
@@ -258,6 +369,8 @@ video.addEventListener('resize', layoutVideo);
 // Restart the whole file; retain the selected loop but switch looping off.
 function restart() {
   if (!ready()) return;
+  cancelCountdown();
+  video.pause();
   loopEnabled = false; renderLoop();
   video.currentTime = 0;
   play();
@@ -265,6 +378,7 @@ function restart() {
 // Seeking outside the enabled region disables looping so playback can continue from the chosen time.
 function seek(time) {
   if (!ready()) return;
+  cancelCountdown();
   if (loopEnabled && loop && (time < loop.start || time >= loop.end)) { loopEnabled = false; renderLoop(); }
   video.currentTime = clamp(time, 0, video.duration);
 }
@@ -278,6 +392,7 @@ $('mirror').addEventListener('click', () => { const mirrored = video.classList.t
 // Create a default ten-second selection only when none exists; later toggles reuse the selection.
 function toggleLoop() {
   if (!ready()) return;
+  cancelCountdown();
   if (!loop) {
     // Trim at the file end; if already ended, select its final playable moment.
     const start = clamp(video.currentTime, 0, Math.max(0, video.duration - 0.1));
@@ -294,6 +409,7 @@ const track = $('loop-track');
 function pointerTime(event) { const box = track.getBoundingClientRect(); return clamp((event.clientX - box.left) / box.width, 0, 1) * video.duration; }
 track.addEventListener('pointerdown', event => {
   if (!ready() || event.button !== 0) return;
+  cancelCountdown();
   const mode = event.target.id === 'handle-start' ? 'start' : event.target.id === 'handle-end' ? 'end' : 'new';
   drag = { mode, anchor: pointerTime(event), previous: loop ? { ...loop } : null, enabled: loopEnabled };
   track.setPointerCapture(event.pointerId); event.preventDefault();
@@ -333,7 +449,7 @@ document.addEventListener('keydown', event => {
     event.preventDefault(); if (!event.repeat) toggleLoop(); return;
   }
   if (event.ctrlKey || event.metaKey || event.altKey || ['INPUT', 'BUTTON'].includes(event.target.tagName)) return;
-  if (event.code === 'Space') { event.preventDefault(); video.paused ? play() : video.pause(); }
+  if (event.code === 'Space') { event.preventDefault(); togglePlayback(); }
   else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); seek(video.currentTime + (event.key === 'ArrowRight' ? 5 : -5)); }
   else if (event.key === '-' || event.key === '_') setSpeed(speedStep(speed, -1));
   else if (event.key === '+' || event.key === '=') setSpeed(speedStep(speed, 1));
@@ -404,6 +520,7 @@ document.addEventListener('webkitfullscreenerror', () => status('Full-screen was
 // The empty-player message and play icon share the native file picker.
 $('empty-open').addEventListener('click', event => {
   event.stopPropagation();
+  cancelCountdown();
   $('file').click();
 });
 $('empty-open').addEventListener('pointerdown', event => event.stopPropagation());

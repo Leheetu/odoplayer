@@ -211,3 +211,18 @@ button, input, label { touch-action: manipulation; }
 .no-video .right-controls { grid-column: 2; grid-row: 1; }
 /* Loading errors remain readable without exposing unavailable controls. */
 .no-video #status:not(.shortcut-hint) { display: block !important; }
+/* Count-in remains centered over the playback view, independent of crop and mirror. */
+#countdown {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  color: #ffffff;
+  background: #080a0e40;
+  font-size: clamp(64px, 16vmin, 140px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 18px #000000, 0 0 42px #b52b6980;
+}
