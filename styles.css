@@ -204,8 +204,7 @@ button, input, label { touch-action: manipulation; }
 #empty-open:focus-visible { outline: 2px solid #f477ad; outline-offset: 2px; }
 /* Before video metadata is ready, expose only file selection and volume. */
 .no-video .controls > :not(.toolbar),
-.no-video .center-controls,
-.no-video #fullscreen { display: none !important; }
+.no-video .center-controls { display: none !important; }
 .no-video .toolbar { grid-template-columns: 1fr 1fr; }
 .no-video #open { grid-column: 1; grid-row: 1; }
 .no-video .right-controls { grid-column: 2; grid-row: 1; }
@@ -275,3 +274,9 @@ button, input, label { touch-action: manipulation; }
 /* The wrapper receives hover events even while the crop button is disabled. */
 #crop-control { display: inline-flex; }
 #clear-crop:disabled { pointer-events: none; }
+
+/* Audio keeps all transport controls, while replacing video-only actions with a filename. */
+#audio-title { position: relative; z-index: 1; max-width: 90%; max-height: 90%; overflow: auto; padding: 20px; text-align: center; overflow-wrap: anywhere; font-size: clamp(22px, 4vw, 56px); font-weight: 600; pointer-events: none; }
+.audio-only #mirror, .audio-only #crop-control { display: none; }
+/* The offline build replaces its download link with a release label in the same location. */
+.offline-build .download-version { font-size: 14px; line-height: 20px; margin: 6px 0; }

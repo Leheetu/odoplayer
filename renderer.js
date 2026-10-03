@@ -280,8 +280,11 @@ function load(file) {
   loop = null; loopEnabled = false; drag = null; renderLoop();
   for (const id of ['play', 'seek']) $(id).disabled = true;
   $('empty').hidden = true; $('filename').textContent = file.name;
+  $('audio-title').textContent = file.name;
+  $('audio-title').hidden = true;
+  document.body.classList.remove('audio-only');
   sourceURL = URL.createObjectURL(file); video.src = sourceURL;
-  status('Loading video…');
+  status('Loading file…');
 }
 // Native file selection and drag-and-drop both feed the same local-file loader.
 $('open').addEventListener('click', () => { cancelCountdown(); $('file').click(); });
@@ -291,14 +294,18 @@ document.addEventListener('dragleave', event => { if (!event.relatedTarget) docu
 document.addEventListener('drop', event => { event.preventDefault(); document.body.classList.remove('dragging'); load(event.dataTransfer.files[0]); });
 // Enable controls once duration is known; follow video events for errors and Play/Stop labels.
 video.addEventListener('loadedmetadata', () => {
-  if (!ready()) { status('This file has no usable video duration. Try an H.264 MP4.'); return; }
+  if (!ready()) { status('This file has no usable media duration. Try an MP4 video or MP3 audio file.'); return; }
   // Reveal the playback HUD only after a usable video has loaded.
   document.body.classList.remove('no-video');
+  // Inspect decoded tracks rather than extensions, which may be missing or misleading.
+  const audioOnly = video.videoWidth === 0 && video.videoHeight === 0;
+  document.body.classList.toggle('audio-only', audioOnly);
+  $('audio-title').hidden = !audioOnly;
   for (const id of ['play', 'seek']) $(id).disabled = false;
   $('seek').max = video.duration; setSpeed(speed); updatePosition(); renderLoop(); showHUD();
   status('Space: play/stop · R: restart video · L: loop on/off · ← →: seek 5s · − +: speed');
 });
-video.addEventListener('error', () => { cancelCountdown(); if (video.getAttribute('src')) status('Cannot play this file. Try an MP4 encoded with H.264 video and AAC audio.'); });
+video.addEventListener('error', () => { cancelCountdown(); if (video.getAttribute('src')) status('Cannot play this file. Try an MP3 audio file or an MP4 encoded with H.264 video and AAC audio.'); });
 // Preserve the HUD hidden by the last count-in beat when playback starts.
 video.addEventListener('play', () => {
   syncPlaybackButton();
@@ -383,10 +390,10 @@ function setCrop(value) {
 stage.addEventListener('pointerdown', event => {
   if (!ready() || event.button !== 0 || !event.isPrimary || cropGesture) return;
   const view = viewGeometry();
-  if (!view) return;
-  const x = event.clientX - view.bounds.left - view.left;
-  const y = event.clientY - view.bounds.top - view.top;
-  const inside = x >= 0 && x <= view.area.width * view.scale && y >= 0 && y <= view.area.height * view.scale;
+  if (!view && !document.body.classList.contains('audio-only')) return;
+  const x = view ? event.clientX - view.bounds.left - view.left : 0;
+  const y = view ? event.clientY - view.bounds.top - view.top : 0;
+  const inside = view && x >= 0 && x <= view.area.width * view.scale && y >= 0 && y <= view.area.height * view.scale;
   cropGesture = { pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY,
     anchor: inside ? sourcePoint(event, view) : null, end: null, moved: false,
     revealOnly: event.pointerId === revealOnlyPointerId,
@@ -538,7 +545,7 @@ const fullscreenButton = $('fullscreen');
 // iPadOS can identify itself as macOS when requesting desktop websites.
 const mobilePlatform = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 const desktopModeIPad = /Mac/i.test(navigator.platform) && navigator.maxTouchPoints > 1;
-fullscreenButton.hidden = !(mobilePlatform || desktopModeIPad);
+fullscreenButton.hidden = false;
 document.body.classList.toggle('mobile-device', mobilePlatform || desktopModeIPad);
 // Detect standard/prefixed fullscreen and Home Screen web-app mode.
 function fullscreenElement() { return document.fullscreenElement || document.webkitFullscreenElement; }
@@ -557,6 +564,8 @@ function updateFullscreenButton() {
 function fullscreenHelp() {
   if (standaloneMode()) {
     window.alert('OdoPlayer is already running without browser toolbars. Any remaining system status bar is controlled by your device.');
+  } else if (!mobilePlatform && !desktopModeIPad) {
+    window.alert('Full-screen was blocked by this browser. Use its full-screen menu command or keyboard shortcut (usually F11 on Windows).');
   } else {
     window.alert('This browser cannot put the whole player into full-screen here. On iPhone: open this page in Safari, tap Share, choose Add to Home Screen, enable Open as Web App if shown, and open OdoPlayer from that new icon. This removes Safari’s toolbars while keeping the crop and player controls.');
   }
@@ -583,8 +592,8 @@ fullscreenButton.addEventListener('click', async () => {
 });
 document.addEventListener('fullscreenchange', updateFullscreenButton);
 document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
-document.addEventListener('fullscreenerror', () => status('Full-screen was blocked by the browser. Try opening OdoPlayer from your Home Screen.'));
-document.addEventListener('webkitfullscreenerror', () => status('Full-screen was blocked by the browser. Try opening OdoPlayer from your Home Screen.'));
+document.addEventListener('fullscreenerror', () => status('Full-screen was blocked by the browser. Use its full-screen command or open OdoPlayer from your Home Screen.'));
+document.addEventListener('webkitfullscreenerror', () => status('Full-screen was blocked by the browser. Use its full-screen command or open OdoPlayer from your Home Screen.'));
 
 // The empty-player message and play icon share the native file picker.
 $('empty-open').addEventListener('click', event => {

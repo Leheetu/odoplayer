@@ -9,30 +9,34 @@
   <meta name="apple-mobile-web-app-title" content="OdoPlayer">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>OdoPlayer</title>
+  <link rel="icon" type="image/png" href="odoplayerlogo_small.png">
+  <link rel="apple-touch-icon" href="odoplayerlogo_small.png">
   <!-- Load shared helpers before the renderer; deferred scripts run after the markup is parsed. -->
   <link rel="stylesheet" href="styles.css">
   <script defer src="model.js"></script>
   <script defer src="renderer.js"></script>
 </head>
 <body class="no-video">
-  <!-- Hidden native video picker, opened by either Open Video or the empty-state button. -->
-  <input id="file" type="file" accept="video/*" hidden>
+  <!-- Hidden native video picker, opened by either Open File or the empty-state button. -->
+  <input id="file" type="file" accept="video/*,audio/*,.mp3" hidden>
   <main>
     <!-- Playback surface: the clipping frame enables view-only zoom and the outline previews a crop. -->
     <section id="stage" aria-label="Video display">
       <div id="video-frame"><video id="video" playsinline></video></div>
+      <!-- Audio uses the same media engine, with its filename in place of video pixels. -->
+      <div id="audio-title" hidden></div>
       <div id="crop-outline" hidden aria-hidden="true"></div>
       <!-- Count-in is outside the video frame so cropping/mirroring cannot alter it. -->
       <div id="countdown" role="status" aria-live="assertive" aria-atomic="true" hidden></div>
       <!-- Empty-state instructions, invisible picker hit area, and decorative image; hidden after loading a file. -->
-      <div id="empty"><div class="empty-copy"><button id="empty-open" type="button" aria-label="Open video" title="Open video"></button><div class="empty-icon">▶</div><h2>Select a video</h2><p>Select 'Open Video' or drag &amp; drop</p><small>The video stays on your device.</small></div><img id="empty-art" src="pipasentopng.png" alt="" draggable="false"></div>
+      <div id="empty"><div class="empty-copy"><button id="empty-open" type="button" aria-label="Open file" title="Open file"></button><div class="empty-icon">▶</div><h2>Select a file</h2><p>Select 'Open File' or drag &amp; drop</p><small>The file stays on your device.</small></div><img id="empty-art" src="pipasentopng.png" alt="" draggable="false"></div>
       <!-- Drag-and-drop overlay, shown while a file is dragged over the player. -->
-      <div id="drop-hint">Drop to open video</div>
+      <div id="drop-hint">Drop to open file</div>
     </section>
     <!-- Bottom HUD; its measured height determines the remaining video area. -->
     <section id="hud" class="controls" aria-label="Playback controls">
       <!-- Current filename, time display, and ordinary playback seek slider. -->
-      <div class="info"><strong id="filename">No video loaded</strong><span id="clock">0:00.0 / 0:00.0</span></div>
+      <div class="info"><strong id="filename">No file loaded</strong><span id="clock">0:00.0 / 0:00.0</span></div>
       <input id="seek" class="seek" type="range" min="0" max="100" step="0.01" value="0" aria-label="Playback position" disabled>
       <!-- Separate loop selection strip with adjustable start/end handles and a playback marker. -->
       <div class="loop-caption"><span>LOOP REGION</span><span id="loop-label"></span></div>
@@ -44,9 +48,9 @@
       <p id="status" class="shortcut-hint" role="status">Space: play/stop · R: restart video · L: loop on/off · ← →: seek 5s · − +: speed</p>
       <!-- Main controls: file picker at left, practice controls centered, volume/fullscreen at right. -->
       <div class="toolbar">
-        <button id="open">Open Video</button>
+        <button id="open">Open File</button>
         <!-- The hosted page offers the matching self-contained release before a video is loaded. -->
-        <div id="offline-download"><a id="download-offline" href="OdoPlayer_v10_Offline.html" download="OdoPlayer_v10_Offline.html">Download OdoPlayer (Offline Version)</a><span class="download-version">v10</span></div>
+        <div id="offline-download"><a id="download-offline" href="OdoPlayer_v11_Offline.html" download="OdoPlayer_v11_Offline.html">Download OdoPlayer (Offline Version)</a><span class="download-version">v11</span></div>
         <div class="center-controls">
           <button id="mirror" aria-pressed="false">Mirror</button>
           <div class="speed-setting"><span class="speed-title">Speed</span><div class="group speed"><button id="slower" aria-label="Decrease speed by 10 percentage points">−</button><button id="speed" title="Reset to normal speed">100%</button><button id="faster" aria-label="Increase speed by 10 percentage points">+</button></div></div>
@@ -58,12 +62,12 @@
           <span id="crop-control"><button id="clear-crop" aria-describedby="crop-tooltip" disabled>Drag video to Crop</button></span>
         </div>
         <div class="right-controls">
-          <label class="volume">Volume <input id="volume" type="range" min="0" max="1" step="0.01" value="1"></label>
           <button id="fullscreen" aria-label="Enter full-screen" aria-pressed="false" title="Full-screen"><span aria-hidden="true">[ &nbsp; ]</span><small id="fullscreen-label">Full-screen</small></button>
+          <label class="volume">Volume <input id="volume" type="range" min="0" max="1" step="0.01" value="1"></label>
         </div>
       </div>
       <!-- Release label lives inside the HUD so it hides with the controls. -->
-      <footer id="app-version">v10</footer>
+      <footer id="app-version">v11</footer>
     </section>
   </main>
 <!-- Fixed tooltip stays above the pointer without being clipped by the HUD. -->
