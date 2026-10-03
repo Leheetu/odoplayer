@@ -41,6 +41,7 @@ function hideHUD(forCountdown = false) {
   if (drag || pointerHeld) { idleTimer = setTimeout(hideHUD, HUD_IDLE_MS); return; }
   if (hud.contains(document.activeElement)) document.activeElement.blur();
   $('countdown-tooltip').hidden = true;
+  $('crop-tooltip').hidden = true;
   hud.inert = true;
   document.body.classList.add('hud-hidden');
 }
@@ -125,16 +126,28 @@ for (const seconds of [4, 8]) {
 // Disabled buttons pass pointer events to their group so the explanation works in every browser.
 const countdownOptions = $('countdown-options');
 const countdownTooltip = $('countdown-tooltip');
-function showCountdownTooltip(event) {
-  if (!loopEnabled || event.pointerType === 'touch') return;
-  countdownTooltip.hidden = false;
-  const bounds = countdownTooltip.getBoundingClientRect();
+// Both disabled-control hints share pointer positioning and viewport bounds.
+function showControlTooltip(tooltip, event) {
+  if (event.pointerType === 'touch') return;
+  tooltip.hidden = false;
+  const bounds = tooltip.getBoundingClientRect();
   const viewport = window.visualViewport;
   const left = viewport?.offsetLeft || 0, top = viewport?.offsetTop || 0;
   const width = viewport?.width || window.innerWidth;
-  countdownTooltip.style.left = Math.max(left + 8, Math.min(event.clientX - bounds.width / 2, left + width - bounds.width - 8)) + 'px';
-  countdownTooltip.style.top = Math.max(top + 8, event.clientY - bounds.height - 12) + 'px';
+  tooltip.style.left = Math.max(left + 8, Math.min(event.clientX - bounds.width / 2, left + width - bounds.width - 8)) + 'px';
+  tooltip.style.top = Math.max(top + 8, event.clientY - bounds.height - 12) + 'px';
 }
+function showCountdownTooltip(event) {
+  if (loopEnabled) showControlTooltip(countdownTooltip, event);
+}
+const cropTooltip = $('crop-tooltip');
+function showCropTooltip(event) {
+  if ($('clear-crop').disabled) showControlTooltip(cropTooltip, event);
+}
+$('crop-control').addEventListener('pointerenter', showCropTooltip);
+$('crop-control').addEventListener('pointermove', showCropTooltip);
+$('crop-control').addEventListener('pointerleave', () => { cropTooltip.hidden = true; });
+window.addEventListener('blur', () => { cropTooltip.hidden = true; });
 countdownOptions.addEventListener('pointerenter', showCountdownTooltip);
 countdownOptions.addEventListener('pointermove', showCountdownTooltip);
 countdownOptions.addEventListener('pointerleave', () => { countdownTooltip.hidden = true; });
@@ -358,6 +371,9 @@ function setCrop(value) {
   crop = value;
   stage.classList.toggle('crop-active', Boolean(crop));
   document.body.classList.toggle('has-crop', Boolean(crop));
+  $('crop-tooltip').hidden = true;
+  if (crop) $('clear-crop').removeAttribute('aria-describedby');
+  else $('clear-crop').setAttribute('aria-describedby', 'crop-tooltip');
   $('clear-crop').disabled = !crop;
   $('clear-crop').textContent = crop ? 'Clear Crop' : 'Drag video to Crop';
   layoutVideo();
@@ -427,12 +443,13 @@ function restart() {
 function seek(time) {
     if (!ready()) return;
     const wasLoopEnabled = loopEnabled;
+    const wasPlaying = !video.paused;
     cancelCountdown();
     if (loopEnabled && loop && (time < loop.start || time >= loop.end)) { loopEnabled = false; renderLoop(); }
     video.currentTime = clamp(time, 0, video.duration);
-    // A user seek to the start counts in even during playback. Active-loop seeks skip it,
+    // Only an already-playing video counts in after seeking to the start; paused videos await Play. Active-loop seeks skip it,
     // including seeks that leave the loop region; internal loop rewinds never call this helper.
-    if (!wasLoopEnabled && video.currentTime <= 0.05) beginCountdown();
+    if (wasPlaying && !wasLoopEnabled && video.currentTime <= 0.05) beginCountdown();
   }
 // Wire the timeline, speed, volume, and mirror controls to their shared playback helpers.
 $('seek').addEventListener('input', event => seek(Number(event.target.value)));
