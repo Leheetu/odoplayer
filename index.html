@@ -46,14 +46,14 @@
       <div class="toolbar">
         <button id="open">Open Video</button>
         <!-- The hosted page offers the matching self-contained release before a video is loaded. -->
-        <div id="offline-download"><a id="download-offline" href="OdoPlayer_v08_Offline.html" download="OdoPlayer_v08_Offline.html">Download OdoPlayer (Offline Version)</a><span class="download-version">v08</span></div>
+        <div id="offline-download"><a id="download-offline" href="OdoPlayer_v09_Offline.html" download="OdoPlayer_v09_Offline.html">Download OdoPlayer (Offline Version)</a><span class="download-version">v09</span></div>
         <div class="center-controls">
           <button id="mirror" aria-pressed="false">Mirror</button>
           <div class="speed-setting"><span class="speed-title">Speed</span><div class="group speed"><button id="slower" aria-label="Decrease speed by 10 percentage points">−</button><button id="speed" title="Reset to normal speed">100%</button><button id="faster" aria-label="Increase speed by 10 percentage points">+</button></div></div>
           <button id="loop-toggle" aria-pressed="false" disabled>Loop off</button>
           <button id="play" class="primary" disabled>Play</button>
           <!-- Exactly one duration is selected; it applies to the next count-in. -->
-          <div class="countdown-setting"><span id="countdown-title">Countdown:</span><div class="countdown-options" role="group" aria-labelledby="countdown-title"><button id="countdown-4" type="button" aria-pressed="true">4s</button><button id="countdown-8" type="button" aria-pressed="false">8s</button></div></div>
+          <div class="countdown-setting"><span id="countdown-title">Beginning Countdown:</span><div id="countdown-options" class="countdown-options" role="group" aria-labelledby="countdown-title"><button id="countdown-4" type="button" aria-pressed="true">4s</button><button id="countdown-8" type="button" aria-pressed="false">8s</button></div></div>
           <!-- Disabled crop instruction becomes the red Clear Crop button when a crop is active. -->
           <button id="clear-crop" disabled>Drag video to Crop</button>
         </div>
@@ -63,8 +63,10 @@
         </div>
       </div>
       <!-- Release label lives inside the HUD so it hides with the controls. -->
-      <footer id="app-version">v08</footer>
+      <footer id="app-version">v09</footer>
     </section>
   </main>
+<!-- Fixed tooltip stays above the pointer without being clipped by the HUD. -->
+  <div id="countdown-tooltip" role="tooltip" hidden>Disable Looping and scroll video to beginning for countdown</div>
 </body>
 </html>

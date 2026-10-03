@@ -40,6 +40,7 @@ function hideHUD(forCountdown = false) {
   if (!ready() || video.error || (video.paused && !forCountdown)) return;
   if (drag || pointerHeld) { idleTimer = setTimeout(hideHUD, HUD_IDLE_MS); return; }
   if (hud.contains(document.activeElement)) document.activeElement.blur();
+  $('countdown-tooltip').hidden = true;
   hud.inert = true;
   document.body.classList.add('hud-hidden');
 }
@@ -71,6 +72,15 @@ function status(message) {
 }
 // Reflect loop state in the strip, toggle button, timestamps, and accessible handle values.
 function renderLoop() {
+  // Loop state disables the beginning-only count-in controls without losing the chosen duration.
+  $('countdown-options').classList.toggle('loop-disabled', loopEnabled);
+  $('countdown-tooltip').hidden = true;
+  for (const seconds of [4, 8]) {
+    const button = $('countdown-' + seconds);
+    button.disabled = loopEnabled;
+    if (loopEnabled) button.setAttribute('aria-describedby', 'countdown-tooltip');
+    else button.removeAttribute('aria-describedby');
+  }
   $('selection').hidden = !loop;
   $('loop-toggle').disabled = !ready();
   $('selection').classList.toggle('inactive', !loopEnabled);
@@ -106,12 +116,29 @@ let countdownSeconds = 4;
 // Changing the duration cancels a pending count-in; only one option is active.
 for (const seconds of [4, 8]) {
   $('countdown-' + seconds).addEventListener('click', () => {
-    if (countdownSeconds === seconds) return;
+    if (loopEnabled || countdownSeconds === seconds) return;
     cancelCountdown();
     countdownSeconds = seconds;
     for (const option of [4, 8]) $('countdown-' + option).setAttribute('aria-pressed', String(option === seconds));
   });
 }
+// Disabled buttons pass pointer events to their group so the explanation works in every browser.
+const countdownOptions = $('countdown-options');
+const countdownTooltip = $('countdown-tooltip');
+function showCountdownTooltip(event) {
+  if (!loopEnabled || event.pointerType === 'touch') return;
+  countdownTooltip.hidden = false;
+  const bounds = countdownTooltip.getBoundingClientRect();
+  const viewport = window.visualViewport;
+  const left = viewport?.offsetLeft || 0, top = viewport?.offsetTop || 0;
+  const width = viewport?.width || window.innerWidth;
+  countdownTooltip.style.left = Math.max(left + 8, Math.min(event.clientX - bounds.width / 2, left + width - bounds.width - 8)) + 'px';
+  countdownTooltip.style.top = Math.max(top + 8, event.clientY - bounds.height - 12) + 'px';
+}
+countdownOptions.addEventListener('pointerenter', showCountdownTooltip);
+countdownOptions.addEventListener('pointermove', showCountdownTooltip);
+countdownOptions.addEventListener('pointerleave', () => { countdownTooltip.hidden = true; });
+window.addEventListener('blur', () => { countdownTooltip.hidden = true; });
 function syncPlaybackButton() {
   $('play').textContent = countdown ? 'Cancel' : video.paused ? 'Play' : 'Stop';
 }

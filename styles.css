@@ -258,3 +258,16 @@ button, input, label { touch-action: manipulation; }
   .no-video .right-controls { grid-column: 1 / -1; grid-row: 2; }
   #download-offline { padding: 10px 12px; font-size: 12px; }
 }
+
+/* Looping makes beginning-countdown settings as subdued as the inactive crop control. */
+.countdown-options button:disabled, .countdown-options button:disabled:hover {
+  background: #14171d; border-color: #1c2028; color: #3e424c;
+  font-weight: 400; opacity: 1; cursor: default; pointer-events: none;
+}
+#countdown-tooltip {
+  position: fixed; z-index: 20; pointer-events: none;
+  max-width: min(300px, calc(100vw - 16px)); padding: 7px 10px;
+  background: #252a34; border: 1px solid #454c5c; border-radius: 6px;
+  color: #fff; font-size: 11px; line-height: 1.4; box-shadow: 0 3px 12px #0006;
+}
+.hud-hidden #countdown-tooltip { display: none; }
