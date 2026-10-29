@@ -70,9 +70,6 @@ document.addEventListener('pointermove', event => {
 for (const name of ['pointerup', 'pointercancel']) document.addEventListener(name, () => { pointerHeld = false; showHUD(); }, true);
 window.addEventListener('blur', () => { pointerHeld = false; showHUD(); });
 window.addEventListener('focus', showHUD);
-// Iframe pointer events cannot bubble to this document; keep an accessible wake-up strip.
-$('show-controls').addEventListener('click', showHUD);
-$('show-controls').addEventListener('pointerenter', showHUD);
 // Separate shortcut hints from status/errors so mobile can hide only keyboard instructions.
 function status(message) {
   $('status').textContent = message;

@@ -87,6 +87,7 @@
           onReady: event => {
             if (generation !== this.generation) return;
             this.player = event.target; this.player.setVolume(this.volumeValue * 100);
+            this.suppressCaptions();
             this.player.getIframe().setAttribute('title', 'YouTube video player');
             this.player.getIframe().setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
             this.timer = setInterval(() => this.poll(), 100); this.poll();
@@ -94,12 +95,14 @@
           onStateChange: event => {
             if (generation !== this.generation) return;
             this.lastState = event.data;
+            if (event.data === 1) this.suppressCaptions();
             // Refresh time/duration before notifying the UI of a native iframe Play click.
             this.poll();
             if (event.data === 1) { this.ytPaused = false; this.emit('play'); }
             if (event.data === 2 || event.data === 0) { this.ytPaused = true; this.emit('pause'); }
             this.poll(); if (event.data === 0) this.emit('ended');
           },
+          onApiChange: () => { if (generation === this.generation) this.suppressCaptions(); },
           onPlaybackRateChange: event => { if (generation === this.generation) { this.ytRate = event.data; this.emit('ratechange'); } },
           onAutoplayBlocked: () => { if (generation === this.generation) { this.ytPaused = true; this.emit('pause'); this.emit('autoplayblocked'); } },
           onError: event => {
@@ -110,8 +113,24 @@
         }});
       } catch (error) { if (generation === this.generation) this.fail(error.message); }
     }
+    // YouTube exposes module unloading in current embeds, but it is not a guaranteed public
+    // captions-off contract. Guard it so API changes never break ordinary video playback.
+    suppressCaptions() {
+      if (!this.isYouTube || !this.player || this.suppressingCaptions) return;
+      this.suppressingCaptions = true; this.lastCaptionCheck = performance.now();
+      try {
+        const modules = this.player.getOptions?.();
+        if (Array.isArray(modules) && !modules.includes('captions')) return;
+        // Clear the selected track as well: unloading alone can retain the saved selection.
+        this.player.setOption?.('captions', 'track', {});
+        this.player.unloadModule?.('captions');
+      } catch (_) { /* Keep playback usable when the optional module API is unavailable. */ }
+      finally { this.suppressingCaptions = false; }
+    }
     poll() {
       if (!this.player?.getDuration || this.ytError) return;
+      // Modules and account preferences may change without another API-change notification.
+      if (performance.now() - (this.lastCaptionCheck || 0) >= 1000) this.suppressCaptions();
       this.ytDuration = this.player.getDuration();
       if (!this.seeking) this.ytTime = this.player.getCurrentTime() || 0;
       if (!this.metadataSent && this.ytDuration > 0) {
