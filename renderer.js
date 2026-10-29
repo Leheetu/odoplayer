@@ -4,6 +4,7 @@ const video = $('video');
 const media = new PracticeMedia(video, $('youtube-view'));
 const { clamp, speedStep, region, format } = PlayerModel;
 let loop = null, loopEnabled = false, drag = null, speed = 1;
+let youtubeFirstStart = false;
 const ready = () => Number.isFinite(media.duration) && media.duration > 0;
 const hud = $('hud');
 // Safari's visible viewport changes as its toolbars open and close.
@@ -34,11 +35,11 @@ function showHUD() {
   clearTimeout(idleTimer);
   document.body.classList.remove('hud-hidden');
   hud.inert = false;
-  if (!media.paused && !(document.body.classList.contains('audio-only') || media.isYouTube)) idleTimer = setTimeout(hideHUD, HUD_IDLE_MS);
+  if (!media.paused && !document.body.classList.contains('audio-only')) idleTimer = setTimeout(hideHUD, HUD_IDLE_MS);
 }
 function hideHUD(forCountdown = false) {
   // Audio has no video surface to expand: keep its controls visible, including during count-ins.
-  if (document.body.classList.contains('audio-only') || media.isYouTube) { showHUD(); return; }
+  if (document.body.classList.contains('audio-only')) { showHUD(); return; }
   // The final count-in beat hides the HUD while the video is still held paused.
   if (!ready() || media.error || (media.paused && !forCountdown)) return;
   if (drag || pointerHeld) { idleTimer = setTimeout(hideHUD, HUD_IDLE_MS); return; }
@@ -69,6 +70,9 @@ document.addEventListener('pointermove', event => {
 for (const name of ['pointerup', 'pointercancel']) document.addEventListener(name, () => { pointerHeld = false; showHUD(); }, true);
 window.addEventListener('blur', () => { pointerHeld = false; showHUD(); });
 window.addEventListener('focus', showHUD);
+// Iframe pointer events cannot bubble to this document; keep an accessible wake-up strip.
+$('show-controls').addEventListener('click', showHUD);
+$('show-controls').addEventListener('pointerenter', showHUD);
 // Separate shortcut hints from status/errors so mobile can hide only keyboard instructions.
 function status(message) {
   $('status').textContent = message;
@@ -216,6 +220,7 @@ function soundCountdownTick(state, number) {
   } catch (_) { /* Keep the visual count-in available even if audio is blocked. */ }
 }
 async function startVideoNow() {
+  if (media.isYouTube) youtubeFirstStart = false;
   try {
     await media.play();
     countdownReady = false;
@@ -229,6 +234,7 @@ async function startVideoNow() {
 }
 function beginCountdown() {
   cancelCountdown();
+  if (media.isYouTube) youtubeFirstStart = false;
   const state = { number: countdownSeconds, initial: countdownSeconds, timer: null };
   countdown = state;
   media.currentTime = 0;
@@ -276,7 +282,7 @@ function beginCountdown() {
 async function play() {
   if (!ready() || countdown) return;
   if (loopEnabled && loop && (media.currentTime < loop.start || media.currentTime >= loop.end)) media.currentTime = loop.start;
-  if (!loopEnabled && media.paused && media.currentTime <= 0.05 && !countdownReady) {
+  if (!loopEnabled && media.paused && (media.currentTime <= 0.05 || (media.isYouTube && youtubeFirstStart && media.currentTime <= 1)) && !countdownReady) {
     beginCountdown();
     return;
   }
@@ -290,6 +296,7 @@ document.addEventListener('keydown', event => { if (event.key === 'Escape' && co
 
 // Switch Dance releases either source and resets practice state before returning to the entry page.
 function switchDance() {
+  youtubeFirstStart = false;
   cancelCountdown(); media.unload();
   loop = null; loopEnabled = false; drag = null; speed = 1;
   setCrop(null); video.classList.remove('mirrored'); $('youtube-view').classList.remove('mirrored');
@@ -321,6 +328,7 @@ function loadYouTube(value) {
   $('empty').hidden = true; $('filename').textContent = 'Loading YouTube…';
   $('clear-crop').disabled = true; $('clear-crop').textContent = 'Crop unavailable';
   $('crop-tooltip').textContent = 'Cropping disabled for youtube videos';
+  youtubeFirstStart = true;
   status('Loading YouTube…'); media.loadYouTube(id);
 }
 $('youtube-url')?.addEventListener('input', event => loadYouTube(event.target.value));
@@ -354,10 +362,20 @@ media.addEventListener('autoplayblocked', () => { countdownReady = media.current
 // Preserve the HUD hidden by the last count-in beat when playback starts.
 media.addEventListener('play', () => {
   if (media.isYouTube && countdown) { media.pause(); return; }
+  // A click inside the embed bypasses our Play button. Intercept its first PLAYING event,
+  // allowing for the few frames elapsed before YouTube reports it, and rewind for the count-in.
+  if (media.isYouTube && youtubeFirstStart && ready()) {
+    youtubeFirstStart = false;
+    if (!loopEnabled && media.currentTime <= 1) { beginCountdown(); return; }
+  }
   syncPlaybackButton();
   if (!document.body.classList.contains('hud-hidden')) showHUD();
 });
-media.addEventListener('pause', () => { syncPlaybackButton(); showHUD(); });
+media.addEventListener('pause', () => {
+  syncPlaybackButton();
+  // Delayed YouTube pause acknowledgements must not undo hiding on the final count-in beat.
+  if (!(countdown?.number === 1 && document.body.classList.contains('hud-hidden'))) showHUD();
+});
 function togglePlayback() {
   if (countdown) { cancelCountdown(); return; }
   media.paused ? play() : media.pause();

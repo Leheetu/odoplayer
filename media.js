@@ -94,6 +94,8 @@
           onStateChange: event => {
             if (generation !== this.generation) return;
             this.lastState = event.data;
+            // Refresh time/duration before notifying the UI of a native iframe Play click.
+            this.poll();
             if (event.data === 1) { this.ytPaused = false; this.emit('play'); }
             if (event.data === 2 || event.data === 0) { this.ytPaused = true; this.emit('pause'); }
             this.poll(); if (event.data === 0) this.emit('ended');
