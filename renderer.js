@@ -33,11 +33,14 @@ let idleTimer, pointerHeld = false;
 let revealOnlyPointerId = null;
 function showHUD() {
   clearTimeout(idleTimer);
+  idleTimer = null;
   document.body.classList.remove('hud-hidden');
   hud.inert = false;
   if (!media.paused && !document.body.classList.contains('audio-only')) idleTimer = setTimeout(hideHUD, HUD_IDLE_MS);
 }
 function hideHUD(forCountdown = false) {
+  clearTimeout(idleTimer);
+  idleTimer = null;
   // Audio has no video surface to expand: keep its controls visible, including during count-ins.
   if (document.body.classList.contains('audio-only')) { showHUD(); return; }
   // The final count-in beat hides the HUD while the video is still held paused.
@@ -366,9 +369,15 @@ media.addEventListener('play', () => {
     if (!loopEnabled && media.currentTime <= 1) { beginCountdown(); return; }
   }
   syncPlaybackButton();
-  if (!document.body.classList.contains('hud-hidden')) showHUD();
+  // YouTube emits PLAYING again after buffering and loop seeks. Preserve an existing
+  // inactivity timer; only actual input or a genuine pause should restart that wait.
+  if (!document.body.classList.contains('hud-hidden') && idleTimer == null && !document.body.classList.contains('audio-only')) {
+    idleTimer = setTimeout(hideHUD, HUD_IDLE_MS);
+  }
 });
 media.addEventListener('pause', () => {
+  // A loop reaching the file end is resumed by the ended handler, not a user pause.
+  if (media.isYouTube && media.lastState === 0 && loopEnabled && loop) return;
   syncPlaybackButton();
   // Delayed YouTube pause acknowledgements must not undo hiding on the final count-in beat.
   if (!(countdown?.number === 1 && document.body.classList.contains('hud-hidden'))) showHUD();
@@ -601,7 +610,13 @@ function enforceLoop() {
 }
 // Media events and animation frames keep the UI responsive and handle loops reaching the file end.
 media.addEventListener('timeupdate', () => { enforceLoop(); updatePosition(); });
-media.addEventListener('ended', () => { if (loopEnabled && loop) { media.currentTime = loop.start; play(); } });
+media.addEventListener('ended', () => {
+  if (!loopEnabled || !loop) return;
+  // Mark YouTube as resuming before seeking so its adapter does not issue a temporary
+  // pause command at the loop boundary (which would look like a real user pause).
+  if (media.isYouTube) { startVideoNow(); media.currentTime = loop.start; }
+  else { media.currentTime = loop.start; play(); }
+});
 function tick() { enforceLoop(); if (!media.paused) updatePosition(); requestAnimationFrame(tick); }
 tick();
 
